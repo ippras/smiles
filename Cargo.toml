@@ -1,0 +1,19 @@
+[package]
+name = "smiles"
+version = "0.0.1"
+edition = "2021"
+description = "SMILES parser"
+readme = "README.md"
+homepage = "https://crates.io/crates/smiles"
+repository = "https://github.com/ippras/smiles"
+license = "MIT OR Apache-2.0"
+keywords = [
+    "smiles",
+    "parser",
+    "parsing",
+    "parse",
+    "encoding",
+]
+categories = ["encoding", "parser", "parser-implementations", "science"]
+
+[dependencies]

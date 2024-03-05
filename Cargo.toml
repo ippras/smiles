@@ -7,13 +7,14 @@ readme = "README.md"
 homepage = "https://crates.io/crates/smiles"
 repository = "https://github.com/ippras/smiles"
 license = "MIT OR Apache-2.0"
-keywords = [
-    "smiles",
-    "parser",
-    "parsing",
-    "parse",
-    "encoding",
-]
+keywords = ["smiles", "parser", "parsing", "parse", "encoding"]
 categories = ["encoding", "parser", "parser-implementations", "science"]
 
 [dependencies]
+indexmap = { version = "2.2.5", features = ["serde"] }
+nom = "7.1.3"
+petgraph = "0.6.4"
+regex = "1.10.3"
+serde = { version = "1.0.197", features = ["derive"] }
+thiserror = "1.0.57"
+tracing = "0.1.40"

@@ -2,11 +2,11 @@
 //!
 //! [Bracket Atoms](http://opensmiles.org/opensmiles.html#inatoms)
 
-use super::class;
 use crate::{
     charge::charge,
     chirality::{chiral, Chiral},
-    hydrogens::hydrogens,
+    class::class,
+    hydrogen::hydrogens,
 };
 use nom::{
     branch::alt,
@@ -24,8 +24,8 @@ pub struct Bracket {
     pub isotope: Option<u16>,
     pub symbol: Symbol,
     pub chiral: Option<Chiral>,
-    pub hydrogens: u8,
-    pub charge: i8,
+    pub hydrogens: Option<u8>,
+    pub charge: Option<i8>,
     pub class: Option<u64>,
 }
 
@@ -37,8 +37,8 @@ pub fn bracket_atom(input: &str) -> IResult<&str, Bracket> {
                 opt(isotope),
                 symbol,
                 opt(chiral),
-                hydrogens,
-                charge,
+                opt(hydrogens),
+                opt(charge),
                 opt(class),
             )),
             char(']'),

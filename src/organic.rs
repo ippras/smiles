@@ -35,16 +35,20 @@ pub enum Aliphatic {
 
 pub fn aliphatic_organic(input: &str) -> IResult<&str, Aliphatic> {
     alt((
-        map(tag("B"), |_| Aliphatic::B),
-        map(tag("C"), |_| Aliphatic::C),
-        map(tag("N"), |_| Aliphatic::N),
-        map(tag("O"), |_| Aliphatic::O),
-        map(tag("S"), |_| Aliphatic::S),
-        map(tag("P"), |_| Aliphatic::P),
-        map(tag("F"), |_| Aliphatic::F),
-        map(tag("Cl"), |_| Aliphatic::Cl),
-        map(tag("Br"), |_| Aliphatic::Br),
-        map(tag("I"), |_| Aliphatic::I),
+        alt((
+            map(tag("Cl"), |_| Aliphatic::Cl),
+            map(tag("Br"), |_| Aliphatic::Br),
+        )),
+        alt((
+            map(tag("B"), |_| Aliphatic::B),
+            map(tag("C"), |_| Aliphatic::C),
+            map(tag("N"), |_| Aliphatic::N),
+            map(tag("O"), |_| Aliphatic::O),
+            map(tag("S"), |_| Aliphatic::S),
+            map(tag("P"), |_| Aliphatic::P),
+            map(tag("F"), |_| Aliphatic::F),
+            map(tag("I"), |_| Aliphatic::I),
+        )),
     ))(input)
 }
 

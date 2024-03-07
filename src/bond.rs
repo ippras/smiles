@@ -1,23 +1,15 @@
-//! BONDS AND CHAINS
+//! BONDS
 //!
 //! [Bonds](http://opensmiles.org/opensmiles.html#bonds)
 
-use crate::{
-    atoms::{atom, Atom},
-    number,
-};
+use crate::number;
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_while1, take_while_m_n},
-    character::{
-        complete::{char, digit1},
-        is_digit,
-    },
+    character::complete::{char, digit1},
     combinator::{map, map_res, opt},
     error::{Error, ErrorKind},
-    multi::many0,
-    sequence::{delimited, preceded, tuple},
-    Err, IResult, InputTake,
+    sequence::{preceded, tuple},
+    IResult,
 };
 use tracing::warn;
 
@@ -70,7 +62,7 @@ pub fn ring_bond(input: &str) -> IResult<&str, RingBond> {
                 map_res(digit1, |digits: &str| {
                     let count = digits.chars().count();
                     if count != 1 {
-                        return Err(Error::new(input.clone(), ErrorKind::MapRes));
+                        return Err(Error::new(input, ErrorKind::MapRes));
                     }
                     Ok(number(digits)?)
                 }),
@@ -98,109 +90,4 @@ pub fn ring_bond(input: &str) -> IResult<&str, RingBond> {
         )),
         |(bond, number)| RingBond { bond, number },
     )(input)
-}
-
-/// Branched atom
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct BranchedAtom {
-    pub atom: Atom,
-    pub ring_bonds: Vec<RingBond>,
-    pub branches: Vec<Branch>,
-}
-
-fn branched_atom(input: &str) -> IResult<&str, BranchedAtom> {
-    map(
-        tuple((atom, many0(ring_bond), many0(branch))),
-        |(atom, ring_bonds, branches)| BranchedAtom {
-            atom,
-            ring_bonds,
-            branches,
-        },
-    )(input)
-}
-
-/// Branch
-#[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Clone, Hash)]
-pub enum Branch {
-    Chain { chain: Chain },
-    BondChain { bond: Bond, chain: Chain },
-    DotChain { dot: Dot, chain: Chain },
-}
-
-pub fn branch(input: &str) -> IResult<&str, Branch> {
-    delimited(
-        char('('),
-        alt((
-            map(chain, |chain| Branch::Chain { chain }),
-            map(tuple((bond, chain)), |(bond, chain)| Branch::BondChain {
-                bond,
-                chain,
-            }),
-            map(tuple((dot, chain)), |(dot, chain)| Branch::DotChain {
-                dot,
-                chain,
-            }),
-        )),
-        char(')'),
-    )(input)
-}
-
-/// Chain
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum Chain {
-    BranchedAtom {
-        branched_atom: BranchedAtom,
-    },
-    ChainBranchedAtom {
-        chain: Box<Chain>,
-        branched_atom: BranchedAtom,
-    },
-    ChainBondBranchedAtom {
-        chain: Box<Chain>,
-        bond: Bond,
-        branched_atom: BranchedAtom,
-    },
-    ChainDotBranchedAtom {
-        chain: Box<Chain>,
-        dot: Dot,
-        branched_atom: BranchedAtom,
-    },
-}
-
-pub fn chain(input: &str) -> IResult<&str, Chain> {
-    alt((
-        map(branched_atom, |branched_atom| Chain::BranchedAtom {
-            branched_atom,
-        }),
-        map(tuple((chain, branched_atom)), |(chain, branched_atom)| {
-            Chain::ChainBranchedAtom {
-                chain: Box::new(chain),
-                branched_atom,
-            }
-        }),
-        map(
-            tuple((chain, bond, branched_atom)),
-            |(chain, bond, branched_atom)| Chain::ChainBondBranchedAtom {
-                chain: Box::new(chain),
-                bond,
-                branched_atom,
-            },
-        ),
-        map(
-            tuple((chain, dot, branched_atom)),
-            |(chain, dot, branched_atom)| Chain::ChainDotBranchedAtom {
-                chain: Box::new(chain),
-                dot,
-                branched_atom,
-            },
-        ),
-    ))(input)
-}
-
-// Dot
-#[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Copy, Clone, Hash)]
-pub struct Dot;
-
-pub fn dot(input: &str) -> IResult<&str, Dot> {
-    map(char('.'), |_| Dot)(input)
 }

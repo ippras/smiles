@@ -12,6 +12,7 @@ use nom::{
     sequence::preceded,
     IResult,
 };
+use std::ops::Neg;
 use tracing::warn;
 
 /// Charge
@@ -19,8 +20,6 @@ use tracing::warn;
 /// An implementation is required to accept charges in the range -15 to +15.
 pub fn charge(input: &str) -> IResult<&str, i8> {
     alt((
-        preceded(char('+'), count),
-        preceded(char('-'), count),
         map(tag("++"), |_| {
             warn!("++ charge is DEPRECATED!");
             2
@@ -29,6 +28,8 @@ pub fn charge(input: &str) -> IResult<&str, i8> {
             warn!("-- charge is DEPRECATED!");
             -2
         }),
+        preceded(char('+'), count),
+        map(preceded(char('-'), count), Neg::neg),
     ))(input)
 }
 
@@ -36,7 +37,7 @@ fn count(input: &str) -> IResult<&str, i8> {
     map_res(opt(map_res(digit1, number)), |count: Option<u8>| {
         let count = count.unwrap_or(1) as _;
         if count > 15 {
-            return Err(Error::new(input.clone(), ErrorKind::MapRes));
+            return Err(Error::new(input, ErrorKind::MapRes));
         }
         Ok(count)
     })(input)

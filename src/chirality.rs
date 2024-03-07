@@ -2,19 +2,7 @@
 //!
 //! [Chirality](http://opensmiles.org/opensmiles.html#chirality)
 
-use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_while1, take_while_m_n},
-    character::{
-        complete::{char, digit1, u16},
-        is_digit,
-    },
-    combinator::{into, map, map_res, opt},
-    error::{Error, ErrorKind},
-    multi::many0,
-    sequence::{delimited, preceded, tuple},
-    Err, IResult, InputTake,
-};
+use nom::{branch::alt, bytes::complete::tag, combinator::map, IResult};
 
 /// Chiral
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

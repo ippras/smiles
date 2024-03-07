@@ -2,11 +2,10 @@
 //!
 //! [Atoms](http://opensmiles.org/opensmiles.html#inatoms)
 
-use self::{
+use crate::{
     bracket::{bracket_atom, Bracket},
     organic::{organic, Organic},
 };
-use crate::class::class;
 use nom::{branch::alt, character::complete::char, combinator::map, IResult};
 
 /// Atom
@@ -24,6 +23,3 @@ pub fn atom(input: &str) -> IResult<&str, Atom> {
         map(char('*'), |_| Atom::Unknown),
     ))(input)
 }
-
-mod bracket;
-mod organic;

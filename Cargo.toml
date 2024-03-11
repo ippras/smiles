@@ -12,12 +12,18 @@ categories = ["encoding", "parser", "parser-implementations", "science"]
 
 [dependencies]
 anyhow = "1.0.80"
+balsa = "0.3.2"
+gamma = "0.9.0"
 indexmap = { version = "2.2.5", features = ["serde"] }
+itertools = "0.12.1"
 logos = "0.14.0"
 nom = "7.1.3"
 petgraph = "0.6.4"
 regex = "1.10.3"
 rowan = "0.15.15"
 serde = { version = "1.0.197", features = ["derive"] }
+smol_str = "0.2.1"
 thiserror = "1.0.57"
 tracing = "0.1.40"
+
+# chemcore = "0.4.1"

@@ -1,5 +1,0 @@
-== SMILES
-
-SMILES parser
-
-* http://opensmiles.org/opensmiles.html:[OpenSMILES specification]

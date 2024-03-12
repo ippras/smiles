@@ -2,7 +2,7 @@ use crate::syntax::{SyntaxKind, SyntaxKind::ROOT};
 use std::mem::transmute;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) enum Language {}
+pub enum Language {}
 
 impl rowan::Language for Language {
     type Kind = SyntaxKind;

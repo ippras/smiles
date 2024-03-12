@@ -1,7 +1,10 @@
 use crate::{
     errors::{Error, Result, SyntaxError},
-    lexer::Lexer,
-    syntax::{SyntaxKind, SyntaxKind::*, SyntaxNode},
+    lexer::{Lexeme, Lexer},
+    syntax::{
+        SyntaxKind::{self, *},
+        SyntaxNode,
+    },
 };
 use itertools::{peek_nth, PeekNth};
 use rowan::{GreenNode, GreenNodeBuilder};
@@ -9,7 +12,7 @@ use rowan::{GreenNode, GreenNodeBuilder};
 /// Parser
 pub struct Parser<'a> {
     /// input tokens
-    // TODO
+    // TODO: pub -> private
     pub lexer: PeekNth<Lexer<'a>>,
     /// the in-progress tree
     builder: GreenNodeBuilder<'static>,
@@ -29,15 +32,6 @@ impl<'a> Parser<'a> {
         self.builder.token(lexeme.kind.into(), &lexeme.text);
     }
 
-    // fn error(&mut self, expected: &'static [SyntaxKind]) {
-    //     if let Some(lexeme) = self.lexer.next() {
-    //         self.builder.token(ERROR.into(), &lexeme.text);
-    //         self.errors.push(SyntaxError {
-    //             expected,
-    //             found: lexeme,
-    //         });
-    //     }
-    // }
     /// Error
     fn error(&mut self, expected: &'static [SyntaxKind]) -> Error {
         match self.lexer.next() {
@@ -45,7 +39,14 @@ impl<'a> Parser<'a> {
                 expected,
                 found: lexeme,
             }),
-            None => Error::EndOfString,
+            None => Error::Syntax(SyntaxError {
+                expected,
+                found: Lexeme {
+                    kind: END_OF_STRING,
+                    text: Default::default(),
+                    range: Default::default(),
+                },
+            }),
         }
     }
 
@@ -56,6 +57,7 @@ impl<'a> Parser<'a> {
 
     // explicit implicit
     // serial, closure, branch
+    // node, vertex, edges
     pub fn parse(mut self) -> Result<Parse> {
         self.builder.start_node(ROOT.into());
         self.node()?;
@@ -66,60 +68,104 @@ impl<'a> Parser<'a> {
     }
 
     fn node(&mut self) -> Result<()> {
-        let checkpoint = self.builder.checkpoint();
-        match self.peek(0) {
-            Some(LEFT_BRACKET) => self.brackets()?,
-            Some(ASTERISK | IMPLICIT) => self.bump(),
-            _ => return Err(self.error(&[ASTERISK, BRACKETS, IMPLICIT])),
+        self.builder.start_node(NODE.into());
+        self.vertex()?;
+        // if self.peek(0).is_some() && !(self.is_closure() || self.is_branch() || self.is_main()) {
+        //     return Err(self.error(&[CLOSURE, BRANCH, MAIN]));
+        // }
+        if self.is_closure() || self.is_branch() || self.is_main() {
+            self.edges()?;
         }
-        self.builder.start_node_at(checkpoint, NODE.into());
-        self.builder.start_node_at(checkpoint, VERTEX.into());
-        self.builder.finish_node(); // VERTEX
-        self.edges()?;
+        // if self.peek(0).is_some() {
+        //     return Err(self.error(&[CLOSURE, BRANCH, MAIN]));
+        // }
         self.builder.finish_node(); // NODE
         Ok(())
     }
 
+    fn vertex(&mut self) -> Result<()> {
+        self.builder.start_node(VERTEX.into());
+        match self.peek(0) {
+            Some(LEFT_BRACKET) => self.brackets()?,
+            Some(ASTERISK | IMPLICIT) => self.bump(),
+            _ => return Err(self.error(&[ASTERISK, IMPLICIT, LEFT_BRACKET])),
+        }
+        self.builder.finish_node(); // VERTEX
+        Ok(())
+    }
+
     fn edges(&mut self) -> Result<()> {
-        self.builder.start_node(BONDS.into());
-        // Closures
+        self.builder.start_node(EDGES.into());
         loop {
-            match self.peek(0) {
-                Some(DIGIT) => {
-                    self.builder.start_node(CLOSURE.into());
-                    self.builder.start_node(INDEX.into());
-                    self.bump(); // DIGIT
-                    self.builder.finish_node(); // INDEX
-                    self.builder.finish_node(); // CLOSURE
-                }
-                Some(BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | NUMBER | SLASH)
-                    if self.peek(1) == Some(DIGIT) =>
-                {
-                    self.builder.start_node(CLOSURE.into());
-                    self.bond(); // BOND
-                    self.builder.start_node(INDEX.into());
-                    self.bump(); // DIGIT
-                    self.builder.finish_node(); // INDEX
-                    self.builder.finish_node(); // CLOSURE
-                }
-                _ => break,
+            if self.is_closure() {
+                self.closure();
+            } else if self.is_branch() {
+                self.branch()?;
+            } else {
+                break self.main()?;
             }
         }
-        // Branches
-        while let Some(LEFT_PAREN) = self.peek(0) {
-            self.branch()?;
-        }
-        // Serial
-        let checkpoint = self.builder.checkpoint();
-        if let Some(BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | NUMBER | SLASH) = self.peek(0) {
+        self.builder.finish_node(); // EDGES
+        Ok(())
+    }
+
+    fn is_branch(&mut self) -> bool {
+        self.peek(0) == Some(LEFT_PAREN)
+    }
+
+    fn is_closure(&mut self) -> bool {
+        self.peek(0) == Some(DIGIT) || (self.is_bound() && self.peek(1) == Some(DIGIT))
+    }
+
+    fn is_main(&mut self) -> bool {
+        self.is_vertex(0) || (self.is_bound() && self.is_vertex(1))
+    }
+
+    fn is_vertex(&mut self, index: usize) -> bool {
+        self.peek(index) == Some(LEFT_BRACKET)
+            || matches!(self.peek(index), Some(ASTERISK | IMPLICIT))
+    }
+
+    fn is_bound(&mut self) -> bool {
+        matches!(
+            self.peek(0),
+            Some(BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | NUMBER | SLASH),
+        )
+    }
+
+    fn closure(&mut self) {
+        self.builder.start_node(CLOSURE.into());
+        if self.is_bound() {
             self.bond(); // BOND
         }
-        if let Some(ASTERISK | IMPLICIT) = self.peek(0) {
-            self.builder.start_node_at(checkpoint, SERIAL.into());
-            self.node()?;
-            self.builder.finish_node(); // SERIAL
+        self.builder.start_node(INDEX.into());
+        self.bump(); // DIGIT
+        self.builder.finish_node(); // INDEX
+        self.builder.finish_node(); // CLOSURE
+    }
+
+    fn branch(&mut self) -> Result<()> {
+        self.builder.start_node(BRANCH.into());
+        self.bump(); // LEFT_PAREN
+        if self.is_bound() {
+            self.bond(); // BOND
         }
-        self.builder.finish_node(); // BONDS
+        self.node()?;
+        if self.peek(0) != Some(RIGHT_PAREN) {
+            return Err(self.error(&[RIGHT_PAREN]));
+        }
+        self.bump(); // RIGHT_PAREN
+        self.builder.finish_node(); // BRANCH
+        Ok(())
+    }
+
+    fn main(&mut self) -> Result<()> {
+        self.builder.start_node(MAIN.into());
+        if self.is_bound() {
+            self.bond(); // BOND
+        }
+        self.node()?; // NODE
+        self.builder.finish_node(); // MAIN
         Ok(())
     }
 
@@ -129,86 +175,53 @@ impl<'a> Parser<'a> {
         self.builder.finish_node();
     }
 
-    fn branch(&mut self) -> Result<()> {
-        self.builder.start_node(BRANCH.into());
-        self.bump(); // LEFT_PAREN
-        if let Some(BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | NUMBER | SLASH) = self.peek(0) {
-            self.bond(); // BOND
-        }
-        self.node()?;
-        self.bump(); // RIGHT_PAREN
-        self.builder.finish_node(); // BRANCH
-        Ok(())
-    }
-
     fn brackets(&mut self) -> Result<()> {
         self.builder.start_node(BRACKETS.into());
         self.bump(); // LEFT_BRACKET
         if let Some(DIGIT) = self.peek(0) {
-            self.isotope();
+            self.builder.start_node(ISOTOPE.into());
+            self.unsigned();
+            self.builder.finish_node(); // ISOTOPE
         }
         match self.peek(0) {
             Some(ASTERISK | EXPLICIT | H | IMPLICIT) => self.bump(),
             _ => return Err(self.error(&[ASTERISK, EXPLICIT, H, IMPLICIT])),
         }
         if let Some(AT) = self.peek(0) {
-            self.parity();
+            self.builder.start_node(PARITY.into());
+            self.bump(); // AT
+            if let Some(AT) = self.peek(0) {
+                self.bump(); // AT
+            }
+            self.builder.finish_node(); // PARITY
         }
         if let Some(H) = self.peek(0) {
-            self.hydrogens();
+            self.builder.start_node(HYDROGENS.into());
+            self.bump(); // H
+            if let Some(DIGIT) = self.peek(0) {
+                self.unsigned();
+            }
+            self.builder.finish_node(); // HYDROGENS
         }
         if let Some(PLUS | MINUS) = self.peek(0) {
-            self.charge();
+            self.builder.start_node(CHARGE.into());
+            self.signed(); // SIGNED
+            self.builder.finish_node(); // CHARGE
         }
         if let Some(COLON) = self.peek(0) {
-            self.class()?;
+            self.builder.start_node(CLASS.into());
+            self.bump(); // COLON
+            match self.peek(0) {
+                Some(DIGIT) => self.unsigned(),
+                _ => return Err(self.error(&[DIGIT])),
+            }
+            self.builder.finish_node(); // CLASS
         }
         if self.peek(0) != Some(RIGHT_BRACKET) {
             return Err(self.error(&[RIGHT_BRACKET]));
         }
         self.bump(); // RIGHT_BRACKET
         self.builder.finish_node();
-        Ok(())
-    }
-
-    fn isotope(&mut self) {
-        self.builder.start_node(ISOTOPE.into());
-        self.unsigned();
-        self.builder.finish_node(); // ISOTOPE
-    }
-
-    fn parity(&mut self) {
-        self.builder.start_node(PARITY.into());
-        self.bump(); // AT
-        if let Some(AT) = self.peek(0) {
-            self.bump(); // AT
-        }
-        self.builder.finish_node(); // PARITY
-    }
-
-    fn hydrogens(&mut self) {
-        self.builder.start_node(HYDROGENS.into());
-        self.bump(); // H
-        if let Some(DIGIT) = self.peek(0) {
-            self.unsigned();
-        }
-        self.builder.finish_node(); // HYDROGENS
-    }
-
-    fn charge(&mut self) {
-        self.builder.start_node(CHARGE.into());
-        self.signed(); // SIGNED
-        self.builder.finish_node(); // CHARGE
-    }
-
-    fn class(&mut self) -> Result<()> {
-        self.builder.start_node(CLASS.into());
-        self.bump(); // COLON
-        match self.peek(0) {
-            Some(DIGIT) => self.unsigned(),
-            _ => return Err(self.error(&[DIGIT])),
-        }
-        self.builder.finish_node(); // CLASS
         Ok(())
     }
 
@@ -228,63 +241,6 @@ impl<'a> Parser<'a> {
         }
         self.builder.finish_node(); // UNSIGNED
     }
-
-    // fn bump(&mut self) {
-    //     if let Some(Ok(token)) = self.lexer.next() {
-    //         self.builder.token(token.into(), self.lexer.slice());
-    //     }
-    // }
-
-    // fn list(&mut self) {
-    //     assert_eq!(self.current(), Some(RightParen));
-    //
-    //     self.builder.start_node(LIST.into());
-    //     self.bump(); // '('
-    //     loop {
-    //         match self.sexp() {
-    //             SexpRes::Eof => {
-    //                 self.errors.push("expected `)`".to_string());
-    //                 break;
-    //             }
-    //             SexpRes::RParen => {
-    //                 self.bump();
-    //                 break;
-    //             }
-    //             SexpRes::Ok => (),
-    //         }
-    //     }
-    //     // close the list node
-    //     self.builder.finish_node();
-    // }
-
-    // fn sexp(&mut self) -> SexpRes {
-    //     // Eat leading whitespace
-    //     self.skip_ws();
-    //     // Either a list, an atom, a closing paren,
-    //     // or an eof.
-    //     let t = match self.current() {
-    //         None => return SexpRes::Eof,
-    //         Some(R_PAREN) => return SexpRes::RParen,
-    //         Some(t) => t,
-    //     };
-    //     match t {
-    //         L_PAREN => self.list(),
-    //         WORD => {
-    //             self.builder.start_node(ATOM.into());
-    //             self.bump();
-    //             self.builder.finish_node();
-    //         }
-    //         ERROR => self.bump(),
-    //         _ => unreachable!(),
-    //     }
-    //     SexpRes::Ok
-    // }
-
-    // fn skip_ws(&mut self) {
-    //     while self.current() == Some(WHITESPACE) {
-    //         self.bump()
-    //     }
-    // }
 }
 
 /// Parse

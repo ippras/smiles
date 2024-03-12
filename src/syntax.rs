@@ -1,14 +1,14 @@
 use crate::language::Language;
 use logos::Logos;
 
-pub(crate) type SyntaxNode = rowan::SyntaxNode<Language>;
+pub type SyntaxNode = rowan::SyntaxNode<Language>;
 
-pub(crate) type SyntaxToken = rowan::SyntaxToken<Language>;
+pub type SyntaxToken = rowan::SyntaxToken<Language>;
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Logos, Ord, PartialEq, PartialOrd)]
 #[repr(u16)]
-pub(crate) enum SyntaxKind {
+pub enum SyntaxKind {
     #[token("*")]
     ASTERISK,
     #[token("@")]
@@ -70,11 +70,13 @@ pub(crate) enum SyntaxKind {
 
     BONDS,
     BOND,
-    SERIAL,
+    MAIN,
     CLOSURE,
 
     NODE,
     VERTEX,
+    EDGES,
+    EDGE,
 
     UNSIGNED,
     SIGNED,
@@ -89,8 +91,7 @@ pub(crate) enum SyntaxKind {
     ISOTOPE,
     PARITY,
 
-    END,
-    ERROR,
+    END_OF_STRING,
     ROOT,
 }
 

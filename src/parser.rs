@@ -8,6 +8,7 @@ use crate::{
 };
 use itertools::{peek_nth, PeekNth};
 use rowan::{GreenNode, GreenNodeBuilder};
+use tracing::error;
 
 /// Parser
 pub struct Parser<'a> {
@@ -61,6 +62,9 @@ impl<'a> Parser<'a> {
     pub fn parse(mut self) -> Result<Parse> {
         self.builder.start_node(ROOT.into());
         self.node()?;
+        if self.peek(0).is_some() {
+            return Err(self.error(&[END_OF_STRING]));
+        }
         self.builder.finish_node(); // ROOT
         Ok(Parse {
             green_node: self.builder.finish(),
@@ -70,15 +74,9 @@ impl<'a> Parser<'a> {
     fn node(&mut self) -> Result<()> {
         self.builder.start_node(NODE.into());
         self.vertex()?;
-        // if self.peek(0).is_some() && !(self.is_closure() || self.is_branch() || self.is_main()) {
-        //     return Err(self.error(&[CLOSURE, BRANCH, MAIN]));
-        // }
         if self.is_closure() || self.is_branch() || self.is_main() {
             self.edges()?;
         }
-        // if self.peek(0).is_some() {
-        //     return Err(self.error(&[CLOSURE, BRANCH, MAIN]));
-        // }
         self.builder.finish_node(); // NODE
         Ok(())
     }

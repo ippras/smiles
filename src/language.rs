@@ -1,6 +1,7 @@
 use crate::syntax::{SyntaxKind, SyntaxKind::ROOT};
 use std::mem::transmute;
 
+/// Language
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Language {}
 

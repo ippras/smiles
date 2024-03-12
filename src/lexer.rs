@@ -1,6 +1,3 @@
-// mod syntax_kind;
-// pub(crate) use syntax_kind::SyntaxKind;
-
 use crate::syntax::SyntaxKind;
 use logos::Logos;
 use rowan::{TextRange, TextSize};

@@ -74,7 +74,7 @@ mod test {
         let parse = parser.parse().unwrap();
         let root = parse.syntax();
         for node in root.children() {
-            if node.kind() == NODE {
+            if node.kind() == TREE {
                 walk_node(&mut graph, &node);
             }
         }
@@ -88,12 +88,12 @@ mod test {
                 .unwrap();
             println!("{vertex:?}");
             let from = graph.add_node(vertex.to_string());
-            if let Some(edges) = node.children().find(|child| child.kind() == EDGES) {
-                println!("{edges:?}");
-                if let Some(edge) = edges.children().find(|child| child.kind() == MAIN) {
-                    let bond = edge.children().find(|child| child.kind() == BOND);
-                    let weight = bond.map(|bond| {
-                        match bond.first_child_or_token().map(|child| child.kind()) {
+            if let Some(paths) = node.children().find(|child| child.kind() == BRANCHES) {
+                println!("{paths:?}");
+                for path in paths.children().filter(|child| child.kind() == BRANCH) {
+                    let edge = path.children().find(|child| child.kind() == EDGE);
+                    let weight = edge.map(|edge| {
+                        match edge.first_child_or_token().map(|bond| bond.kind()) {
                             Some(MINUS) => 1,
                             Some(EQUALS) => 2,
                             Some(NUMBER) => 3,
@@ -104,25 +104,7 @@ mod test {
                             _ => unreachable!(),
                         }
                     });
-                    let node = edge.children().find(|child| child.kind() == NODE).unwrap();
-                    let to = walk_node(graph, &node);
-                    graph.add_edge(from, to, weight);
-                }
-                for edge in edges.children().filter(|child| child.kind() == BRANCH) {
-                    let bond = edge.children().find(|child| child.kind() == BOND);
-                    let weight = bond.map(|bond| {
-                        match bond.first_child_or_token().map(|child| child.kind()) {
-                            Some(MINUS) => 1,
-                            Some(EQUALS) => 2,
-                            Some(NUMBER) => 3,
-                            Some(DOLLAR) => 4,
-                            Some(COLON) => 5,
-                            Some(BACKSLASH) => 6,
-                            Some(SLASH) => 7,
-                            _ => unreachable!(),
-                        }
-                    });
-                    let node = edge.children().find(|child| child.kind() == NODE).unwrap();
+                    let node = path.children().find(|child| child.kind() == TREE).unwrap();
                     let to = walk_node(graph, &node);
                     graph.add_edge(from, to, weight);
                 }

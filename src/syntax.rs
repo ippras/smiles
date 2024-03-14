@@ -13,8 +13,27 @@ pub enum SyntaxKind {
     ASTERISK,
     #[token("@")]
     AT,
+    #[token("\\")]
+    BACKSLASH,
     #[token(":")]
     COLON,
+    #[token("$")]
+    DOLLAR,
+    #[token("=")]
+    EQUALS,
+    #[token("-")]
+    MINUS,
+    #[token("#")]
+    NUMBER,
+    #[token("%")]
+    PERCENT,
+    #[token(".")]
+    PERIOD,
+    #[token("+")]
+    PLUS,
+    #[token("/")]
+    SLASH,
+
     #[token("[")]
     LEFT_BRACKET,
     #[token("{")]
@@ -27,30 +46,7 @@ pub enum SyntaxKind {
     RIGHT_CURLY,
     #[token(")")]
     RIGHT_PAREN,
-    #[token(".")]
-    PERIOD,
-    #[token("%")]
-    PERCENT,
 
-    #[token("-")]
-    MINUS,
-    #[token("+")]
-    PLUS,
-    #[token("=")]
-    EQUALS,
-    #[token("#")]
-    NUMBER,
-    #[token("$")]
-    DOLLAR,
-    #[token("/")]
-    SLASH,
-    #[token("\\")]
-    BACKSLASH,
-
-    // #[regex("[+-][0-9]*")]
-    // SIGNED,
-    // #[regex("[0-9]*")]
-    // UNSIGNED,
     #[regex("[0-9]")]
     DIGIT,
 
@@ -64,25 +60,24 @@ pub enum SyntaxKind {
     #[regex("H")]
     H,
 
-    BRACES,
+    // BRACES,
+    // PARENTHESES,
     BRACKETS,
-    PARENTHESES,
 
-    BONDS,
-    BOND,
-    MAIN,
+    EDGE,
     CLOSURE,
 
-    NODE,
+    // EDGES,
+    // EDGE,
+    TREE,
     VERTEX,
-    EDGES,
-    EDGE,
+    BRANCHES,
+    BRANCH,
 
     UNSIGNED,
     SIGNED,
 
     INDEX,
-    BRANCH,
     ATOM,
     CHAIN,
     CHARGE,

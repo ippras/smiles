@@ -1,3 +1,37 @@
+use crate::syntax::{SyntaxKind::*, SyntaxNode};
+
+/// Root
+#[derive(Eq, Hash, PartialEq)]
+#[repr(transparent)]
+struct Root(SyntaxNode);
+
+impl Root {
+    #[allow(unused)]
+    fn cast(node: SyntaxNode) -> Option<Self> {
+        if node.kind() == ROOT {
+            Some(Self(node))
+        } else {
+            None
+        }
+    }
+}
+
+// /// Bond
+// #[derive(Eq, Hash, PartialEq)]
+// #[repr(transparent)]
+// struct Bond(SyntaxNode);
+
+// impl Bond {
+//     #[allow(unused)]
+//     fn cast(node: SyntaxNode) -> Option<Self> {
+//         if node.kind() == BOND {
+//             Some(Self(node))
+//         } else {
+//             None
+//         }
+//     }
+// }
+
 /// Element
 pub enum Element {
     H,

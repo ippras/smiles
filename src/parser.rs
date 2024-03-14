@@ -61,7 +61,7 @@ impl<'a> Parser<'a> {
     // node, vertex, edges
     pub fn parse(mut self) -> Result<Parse> {
         self.builder.start_node(ROOT.into());
-        self.node()?;
+        self.tree()?; // TREE
         if self.peek(0).is_some() {
             return Err(self.error(&[END_OF_STRING]));
         }
@@ -71,14 +71,80 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn node(&mut self) -> Result<()> {
-        self.builder.start_node(NODE.into());
+    fn tree(&mut self) -> Result<()> {
+        self.builder.start_node(TREE.into());
         self.vertex()?;
-        if self.is_closure() || self.is_branch() || self.is_main() {
-            self.edges()?;
+        if self.is_closure() || self.is_branch() {
+            self.branches()?;
         }
-        self.builder.finish_node(); // NODE
+        self.builder.finish_node(); // TREE
         Ok(())
+    }
+
+    fn branches(&mut self) -> Result<()> {
+        self.builder.start_node(BRANCHES.into());
+        loop {
+            if self.is_closure() {
+                self.closure();
+            } else if self.is_branch() {
+                self.parentheses()?;
+            } else {
+                break self.branch()?;
+            }
+        }
+        self.builder.finish_node(); // BRANCHES
+        Ok(())
+    }
+
+    fn closure(&mut self) {
+        self.builder.start_node(CLOSURE.into());
+        if self.is_edge() {
+            self.edge(); // EDGE
+        }
+        self.builder.start_node(INDEX.into());
+        self.bump(); // DIGIT
+        self.builder.finish_node(); // INDEX
+        self.builder.finish_node(); // CLOSURE
+    }
+
+    fn branch(&mut self) -> Result<()> {
+        self.builder.start_node(BRANCH.into());
+        if self.is_edge() {
+            self.edge(); // EDGE
+        }
+        self.tree()?; // TREE
+        self.builder.finish_node(); // BRANCH
+        Ok(())
+    }
+
+    fn parentheses(&mut self) -> Result<()> {
+        self.bump(); // LEFT_PAREN
+        self.branch()?;
+        if self.peek(0) != Some(RIGHT_PAREN) {
+            return Err(self.error(&[RIGHT_PAREN]));
+        }
+        self.bump(); // RIGHT_PAREN
+        Ok(())
+    }
+
+    fn is_branch(&mut self) -> bool {
+        self.peek(0) == Some(LEFT_PAREN) || self.is_vertex(0) || self.is_edge() && self.is_vertex(1)
+    }
+
+    fn is_closure(&mut self) -> bool {
+        self.peek(0) == Some(DIGIT) || (self.is_edge() && self.peek(1) == Some(DIGIT))
+    }
+
+    fn is_vertex(&mut self, index: usize) -> bool {
+        self.peek(index) == Some(LEFT_BRACKET)
+            || matches!(self.peek(index), Some(ASTERISK | IMPLICIT))
+    }
+
+    fn is_edge(&mut self) -> bool {
+        matches!(
+            self.peek(0),
+            Some(BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | NUMBER | SLASH),
+        )
     }
 
     fn vertex(&mut self) -> Result<()> {
@@ -90,87 +156,6 @@ impl<'a> Parser<'a> {
         }
         self.builder.finish_node(); // VERTEX
         Ok(())
-    }
-
-    fn edges(&mut self) -> Result<()> {
-        self.builder.start_node(EDGES.into());
-        loop {
-            if self.is_closure() {
-                self.closure();
-            } else if self.is_branch() {
-                self.branch()?;
-            } else {
-                break self.main()?;
-            }
-        }
-        self.builder.finish_node(); // EDGES
-        Ok(())
-    }
-
-    fn is_branch(&mut self) -> bool {
-        self.peek(0) == Some(LEFT_PAREN)
-    }
-
-    fn is_closure(&mut self) -> bool {
-        self.peek(0) == Some(DIGIT) || (self.is_bound() && self.peek(1) == Some(DIGIT))
-    }
-
-    fn is_main(&mut self) -> bool {
-        self.is_vertex(0) || (self.is_bound() && self.is_vertex(1))
-    }
-
-    fn is_vertex(&mut self, index: usize) -> bool {
-        self.peek(index) == Some(LEFT_BRACKET)
-            || matches!(self.peek(index), Some(ASTERISK | IMPLICIT))
-    }
-
-    fn is_bound(&mut self) -> bool {
-        matches!(
-            self.peek(0),
-            Some(BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | NUMBER | SLASH),
-        )
-    }
-
-    fn closure(&mut self) {
-        self.builder.start_node(CLOSURE.into());
-        if self.is_bound() {
-            self.bond(); // BOND
-        }
-        self.builder.start_node(INDEX.into());
-        self.bump(); // DIGIT
-        self.builder.finish_node(); // INDEX
-        self.builder.finish_node(); // CLOSURE
-    }
-
-    fn branch(&mut self) -> Result<()> {
-        self.builder.start_node(BRANCH.into());
-        self.bump(); // LEFT_PAREN
-        if self.is_bound() {
-            self.bond(); // BOND
-        }
-        self.node()?;
-        if self.peek(0) != Some(RIGHT_PAREN) {
-            return Err(self.error(&[RIGHT_PAREN]));
-        }
-        self.bump(); // RIGHT_PAREN
-        self.builder.finish_node(); // BRANCH
-        Ok(())
-    }
-
-    fn main(&mut self) -> Result<()> {
-        self.builder.start_node(MAIN.into());
-        if self.is_bound() {
-            self.bond(); // BOND
-        }
-        self.node()?; // NODE
-        self.builder.finish_node(); // MAIN
-        Ok(())
-    }
-
-    fn bond(&mut self) {
-        self.builder.start_node(BOND.into());
-        self.bump(); // BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | NUMBER | SLASH
-        self.builder.finish_node();
     }
 
     fn brackets(&mut self) -> Result<()> {
@@ -221,6 +206,12 @@ impl<'a> Parser<'a> {
         self.bump(); // RIGHT_BRACKET
         self.builder.finish_node();
         Ok(())
+    }
+
+    fn edge(&mut self) {
+        self.builder.start_node(EDGE.into());
+        self.bump(); // BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | NUMBER | SLASH
+        self.builder.finish_node();
     }
 
     fn signed(&mut self) {

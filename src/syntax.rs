@@ -64,27 +64,23 @@ pub enum SyntaxKind {
     // PARENTHESES,
     BRACKETS,
 
-    EDGE,
-    CLOSURE,
-
-    // EDGES,
-    // EDGE,
-    TREE,
-    VERTEX,
-    BRANCHES,
     BRANCH,
-
-    UNSIGNED,
-    SIGNED,
+    BRANCHES,
+    CLOSURE,
+    EDGE,
+    NODE,
+    TREE,
 
     INDEX,
     ATOM,
-    CHAIN,
     CHARGE,
     CLASS,
     HYDROGENS,
     ISOTOPE,
     PARITY,
+
+    UNSIGNED,
+    SIGNED,
 
     END_OF_STRING,
     ROOT,

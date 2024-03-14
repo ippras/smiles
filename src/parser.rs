@@ -56,9 +56,6 @@ impl<'a> Parser<'a> {
         Some(self.lexer.peek_nth(index)?.kind)
     }
 
-    // explicit implicit
-    // serial, closure, branch
-    // node, vertex, edges
     pub fn parse(mut self) -> Result<Parse> {
         self.builder.start_node(ROOT.into());
         self.tree()?; // TREE
@@ -73,7 +70,7 @@ impl<'a> Parser<'a> {
 
     fn tree(&mut self) -> Result<()> {
         self.builder.start_node(TREE.into());
-        self.vertex()?;
+        self.node()?;
         if self.is_closure() || self.is_branch() {
             self.branches()?;
         }
@@ -86,7 +83,7 @@ impl<'a> Parser<'a> {
         loop {
             if self.is_closure() {
                 self.closure();
-            } else if self.is_branch() {
+            } else if self.peek(0) == Some(LEFT_PAREN) {
                 self.parentheses()?;
             } else {
                 break self.branch()?;
@@ -128,16 +125,15 @@ impl<'a> Parser<'a> {
     }
 
     fn is_branch(&mut self) -> bool {
-        self.peek(0) == Some(LEFT_PAREN) || self.is_vertex(0) || self.is_edge() && self.is_vertex(1)
+        self.peek(0) == Some(LEFT_PAREN) || self.is_node(0) || self.is_edge() && self.is_node(1)
     }
 
     fn is_closure(&mut self) -> bool {
         self.peek(0) == Some(DIGIT) || (self.is_edge() && self.peek(1) == Some(DIGIT))
     }
 
-    fn is_vertex(&mut self, index: usize) -> bool {
-        self.peek(index) == Some(LEFT_BRACKET)
-            || matches!(self.peek(index), Some(ASTERISK | IMPLICIT))
+    fn is_node(&mut self, index: usize) -> bool {
+        matches!(self.peek(index), Some(ASTERISK | IMPLICIT | LEFT_BRACKET))
     }
 
     fn is_edge(&mut self) -> bool {
@@ -147,14 +143,14 @@ impl<'a> Parser<'a> {
         )
     }
 
-    fn vertex(&mut self) -> Result<()> {
-        self.builder.start_node(VERTEX.into());
+    fn node(&mut self) -> Result<()> {
+        self.builder.start_node(NODE.into());
         match self.peek(0) {
             Some(LEFT_BRACKET) => self.brackets()?,
             Some(ASTERISK | IMPLICIT) => self.bump(),
             _ => return Err(self.error(&[ASTERISK, IMPLICIT, LEFT_BRACKET])),
         }
-        self.builder.finish_node(); // VERTEX
+        self.builder.finish_node(); // NODE
         Ok(())
     }
 

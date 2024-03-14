@@ -2,6 +2,10 @@
 
 SMILES parser
 
+explicit, implicit
+serial, closure, branch
+node, vertex, edges
+
 * [OpenSMILES specification](http://opensmiles.org/opensmiles.html)
 
 * [balsa](https://github.com/metamolecular/balsa)

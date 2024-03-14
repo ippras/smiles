@@ -24,8 +24,12 @@ mod syntax;
 #[cfg(test)]
 mod test {
     use crate::{
+        ast::{Atom, Bond, Branch, Root, Tree},
         parser::Parser,
-        syntax::{SyntaxKind, SyntaxKind::*, SyntaxNode, SyntaxToken},
+        syntax::{
+            SyntaxKind::{self, *},
+            SyntaxNode, SyntaxToken,
+        },
     };
     use petgraph::{
         graph::{node_index, NodeIndex, UnGraph},
@@ -72,45 +76,23 @@ mod test {
         let mut graph = Graph::new_undirected();
         let parser = Parser::new("C(OCC)(=C)=CC");
         let parse = parser.parse().unwrap();
-        let root = parse.syntax();
-        for node in root.children() {
-            if node.kind() == TREE {
-                walk_node(&mut graph, &node);
-            }
-        }
-        fn walk_node(
-            graph: &mut Graph<String, Option<usize>, Undirected>,
-            node: &SyntaxNode,
-        ) -> NodeIndex {
-            let vertex = node
-                .children()
-                .find(|child| child.kind() == VERTEX)
-                .unwrap();
-            println!("{vertex:?}");
-            let from = graph.add_node(vertex.to_string());
-            if let Some(paths) = node.children().find(|child| child.kind() == BRANCHES) {
-                println!("{paths:?}");
-                for path in paths.children().filter(|child| child.kind() == BRANCH) {
-                    let edge = path.children().find(|child| child.kind() == EDGE);
-                    let weight = edge.map(|edge| {
-                        match edge.first_child_or_token().map(|bond| bond.kind()) {
-                            Some(MINUS) => 1,
-                            Some(EQUALS) => 2,
-                            Some(NUMBER) => 3,
-                            Some(DOLLAR) => 4,
-                            Some(COLON) => 5,
-                            Some(BACKSLASH) => 6,
-                            Some(SLASH) => 7,
-                            _ => unreachable!(),
-                        }
-                    });
-                    let node = path.children().find(|child| child.kind() == TREE).unwrap();
-                    let to = walk_node(graph, &node);
-                    graph.add_edge(from, to, weight);
-                }
+        let root = Root::cast(parse.syntax()).unwrap();
+        walk_node(&mut graph, &root.tree().unwrap());
+
+        fn walk_node(graph: &mut Graph<Atom, Bond, Undirected>, tree: &Tree) -> NodeIndex {
+            let node = tree.node().unwrap();
+            println!("node: {node:?}");
+            let from = graph.add_node(node.into());
+            println!("from: {from:?}");
+            for branch in tree.branches() {
+                let edge = branch.edge().unwrap();
+                let tree = branch.tree().unwrap();
+                let to = walk_node(graph, &tree);
+                graph.add_edge(from, to, edge.into());
             }
             from
         }
+
         println!("{graph:?}");
 
         for node in graph.node_weights() {

@@ -5,15 +5,6 @@ pub type SyntaxNode = rowan::SyntaxNode<Language>;
 
 pub type SyntaxToken = rowan::SyntaxToken<Language>;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Logos, Ord, PartialEq, PartialOrd)]
-#[repr(u16)]
-pub enum Sign {
-    #[token("*")]
-    ASTERISK,
-    #[token("@")]
-    AT,
-}
-
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Logos, Ord, PartialEq, PartialOrd)]
 #[repr(u16)]
@@ -43,8 +34,6 @@ pub enum SyntaxKind {
     #[token("/")]
     SLASH,
 
-    Sign(Sign),
-
     #[token("[")]
     LEFT_BRACKET,
     #[token("{")]
@@ -63,250 +52,26 @@ pub enum SyntaxKind {
 
     // Explicit symbol
     // #[regex("Ac|Ag|Al|Am|Ar|as|As|At|Au|Ba|Be|Bh|Bi|Bk|Ca|Cd|Ce|Cf|Cm|Cn|Co|Cr|Cs|Cu|Db|Ds|Dy|Er|Es|Eu|Fe|Fl|Fm|Fr|Ga|Gd|Ge|He|Hf|Hg|Ho|Hs|In|Ir|K|Kr|La|Li|Lr|Lu|Lv|Md|Mg|Mn|Mo|Mt|Na|Nb|Nd|Ne|Ni|No|Np|Os|Pa|Pb|Pd|Pm|Po|Pr|Pt|Pu|Ra|Rb|Re|Rf|Rg|Rh|Rn|Ru|Sb|Sc|se|Se|Sg|Si|Sm|Sn|Sr|Ta|Tb|Tc|Te|Th|Ti|Tl|Tm|U|V|W|Xe|Y|Yb|Zn|Zr")]
-    // #[regex("|as|se")]
-    // EXPLICIT,
+    #[regex("[KUVWY]|He|Li|Be|Ne|Na|Mg|Al|Si|Ar|Ca|Sc|Ti|Cr|Mn|Fe|Co|Ni|Cu|Zn|Ga|Ge|As|Se|Kr|Rb|Sr|Zr|Nb|Mo|Tc|Ru|Rh|Pd|Ag|Cd|In|Sn|Sb|Te|Xe|Cs|Ba|Hf|Ta|Re|Os|Ir|Pt|Au|Hg|Tl|Pb|Bi|Po|At|Rn|Fr|Ra|Rf|Db|Sg|Bh|Hs|Mt|Ds|Rg|Cn|Fl|Lv|La|Ce|Pr|Nd|Pm|Sm|Eu|Gd|Tb|Dy|Ho|Er|Tm|Yb|Lu|Ac|Th|Pa|Np|Pu|Am|Cm|Bk|Cf|Es|Fm|Md|No|Lr|as|se")]
+    EXPLICIT,
     // Implicit symbol
-    // #[regex("[BCFINOPS]|Cl|Br|[bcnops]")]
-    // IMPLICIT,
+    #[regex("[BCFINOPS]|Cl|Br|[bcnops]")]
+    IMPLICIT,
 
-    // #[regex("[bcnops]")]
+    #[regex("[]|Cl|Br|[bcnops]")]
+    B,
+    C,
+    F,
+    I,
+    N,
+    O,
+    P,
+    S,
     #[token("H")]
     H,
-    // Explicit two chars
-    #[token("He")]
-    HE,
-    #[token("Li")]
-    LI,
-    #[token("Be")]
-    BE,
-    #[token("Ne")]
-    NE,
-    #[token("Na")]
-    NA,
-    #[token("Mg")]
-    MG,
-    #[token("Al")]
-    AL,
-    #[token("Si")]
-    SI,
-    #[token("Ar")]
-    AR,
-    #[token("Ca")]
-    CA,
-    #[token("Sc")]
-    SC,
-    #[token("Ti")]
-    TI,
-    #[token("Cr")]
-    CR,
-    #[token("Mn")]
-    MN,
-    #[token("Fe")]
-    FE,
-    #[token("Co")]
-    CO,
-    #[token("Ni")]
-    NI,
-    #[token("Cu")]
-    CU,
-    #[token("Zn")]
-    ZN,
-    #[token("Ga")]
-    GA,
-    #[token("Ge")]
-    GE,
-    #[token("As")]
-    AS,
-    #[token("Se")]
-    SE,
-    #[token("Kr")]
-    KR,
-    #[token("Rb")]
-    RB,
-    #[token("Sr")]
-    SR,
-    #[token("Zr")]
-    ZR,
-    #[token("Nb")]
-    NB,
-    #[token("Mo")]
-    MO,
-    #[token("Tc")]
-    TC,
-    #[token("Ru")]
-    RU,
-    #[token("Rh")]
-    RH,
-    #[token("Pd")]
-    PD,
-    #[token("Ag")]
-    AG,
-    #[token("Cd")]
-    CD,
-    #[token("In")]
-    IN,
-    #[token("Sn")]
-    SN,
-    #[token("Sb")]
-    SB,
-    #[token("Te")]
-    TE,
-    #[token("Xe")]
-    XE,
-    #[token("Cs")]
-    CS,
-    #[token("Ba")]
-    BA,
-    #[token("Hf")]
-    HF,
-    #[token("Ta")]
-    TA,
-    #[token("Re")]
-    RE,
-    #[token("Os")]
-    OS,
-    #[token("Ir")]
-    IR,
-    #[token("Pt")]
-    PT,
-    #[token("Au")]
-    AU,
-    #[token("Hg")]
-    HG,
-    #[token("Tl")]
-    TL,
-    #[token("Pb")]
-    PB,
-    #[token("Bi")]
-    BI,
-    #[token("Po")]
-    PO,
-    // #[token("At")]
-    // AT,
-    #[token("Rn")]
-    RN,
-    #[token("Fr")]
-    FR,
-    #[token("Ra")]
-    RA,
-    #[token("Rf")]
-    RF,
-    #[token("Db")]
-    DB,
-    #[token("Sg")]
-    SG,
-    #[token("Bh")]
-    BH,
-    #[token("Hs")]
-    HS,
-    #[token("Mt")]
-    MT,
-    #[token("Ds")]
-    DS,
-    #[token("Rg")]
-    RG,
-    #[token("Cn")]
-    CN,
-    #[token("Fl")]
-    FL,
-    #[token("Lv")]
-    LV,
-    #[token("La")]
-    LA,
-    #[token("Ce")]
-    CE,
-    #[token("Pr")]
-    PR,
-    #[token("Nd")]
-    ND,
-    #[token("Pm")]
-    PM,
-    #[token("Sm")]
-    SM,
-    #[token("Eu")]
-    EU,
-    #[token("Gd")]
-    GD,
-    #[token("Tb")]
-    TB,
-    #[token("Dy")]
-    DY,
-    #[token("Ho")]
-    HO,
-    #[token("Er")]
-    ER,
-    #[token("Tm")]
-    TM,
-    #[token("Yb")]
-    YB,
-    #[token("Lu")]
-    LU,
-    #[token("Ac")]
-    AC,
-    #[token("Th")]
-    TH,
-    #[token("Pa")]
-    PA,
-    #[token("Np")]
-    NP,
-    #[token("Pu")]
-    PU,
-    #[token("Am")]
-    AM,
-    #[token("Cm")]
-    CM,
-    #[token("Bk")]
-    BK,
-    #[token("Cf")]
-    CF,
-    #[token("Es")]
-    ES,
-    #[token("Fm")]
-    FM,
-    #[token("Md")]
-    MD,
-    #[token("No")]
-    NO,
-    #[token("Lr")]
-    LR,
-    // Explicit one char
-    #[token("K")]
-    K,
-    #[token("U")]
-    U,
-    #[token("V")]
-    V,
-    #[token("W")]
-    W,
-    #[token("Y")]
-    Y,
-    // Implicit two chars
-    #[token("Cl")]
-    CL,
-    #[token("Br")]
-    BR,
-    // Implicit one char
-    #[token("B")]
-    B,
-    #[token("C")]
-    C,
-    #[token("F")]
-    F,
-    #[token("I")]
-    I,
-    #[token("N")]
-    N,
-    #[token("O")]
-    O,
-    #[token("P")]
-    P,
-    #[token("S")]
-    S,
 
     BRACKETS,
 
-    // EXPLICIT,
-    // IMPLICIT,
     BRANCH,
     BRANCHES,
     CLOSURE,

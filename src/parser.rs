@@ -133,7 +133,14 @@ impl<'a> Parser<'a> {
     }
 
     fn is_node(&mut self, index: usize) -> bool {
-        matches!(self.peek(index), Some(ASTERISK | IMPLICIT | LEFT_BRACKET))
+        matches!(self.peek(index), Some(ASTERISK | LEFT_BRACKET)) || self.is_implicit(index)
+    }
+
+    fn is_implicit(&mut self, index: usize) -> bool {
+        matches!(
+            self.peek(index),
+            Some(CL | BR | B | C | F | I | N | O | P | S),
+        )
     }
 
     fn is_edge(&mut self) -> bool {
@@ -147,8 +154,8 @@ impl<'a> Parser<'a> {
         self.builder.start_node(NODE.into());
         match self.peek(0) {
             Some(LEFT_BRACKET) => self.brackets()?,
-            Some(ASTERISK | IMPLICIT) => self.bump(),
-            _ => return Err(self.error(&[ASTERISK, IMPLICIT, LEFT_BRACKET])),
+            Some(ASTERISK | CL | BR | B | C | F | I | N | O | P | S) => self.bump(),
+            _ => return Err(self.error(&[ASTERISK, LEFT_BRACKET, CL, BR, B, C, F, I, N, O, P, S])),
         }
         self.builder.finish_node(); // NODE
         Ok(())

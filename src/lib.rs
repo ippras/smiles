@@ -48,7 +48,7 @@ mod test {
 
     #[test]
     fn parser() {
-        let parser = Parser::new("C(O)(=C)=CC");
+        let parser = Parser::new("C([O])(=C)=CC");
         let parse = parser.parse().unwrap();
         let root = parse.syntax();
         for child in root.children() {
@@ -77,18 +77,18 @@ mod test {
         let parser = Parser::new("C(OCC)(=C)=CC");
         let parse = parser.parse().unwrap();
         let root = Root::cast(parse.syntax()).unwrap();
-        walk_node(&mut graph, &root.tree().unwrap());
+        walk(&mut graph, &root.tree().unwrap());
 
-        fn walk_node(graph: &mut Graph<Atom, Bond, Undirected>, tree: &Tree) -> NodeIndex {
+        fn walk(graph: &mut Graph<Atom, Option<Bond>, Undirected>, tree: &Tree) -> NodeIndex {
             let node = tree.node().unwrap();
-            println!("node: {node:?}");
+            // println!("node: {node:?}");
             let from = graph.add_node(node.into());
-            println!("from: {from:?}");
+            // println!("from: {from:?}");
             for branch in tree.branches() {
-                let edge = branch.edge().unwrap();
                 let tree = branch.tree().unwrap();
-                let to = walk_node(graph, &tree);
-                graph.add_edge(from, to, edge.into());
+                let to = walk(graph, &tree);
+                let edge = branch.edge().map(Into::into);
+                graph.add_edge(from, to, edge);
             }
             from
         }

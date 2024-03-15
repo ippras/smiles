@@ -1,3 +1,7 @@
+use std::iter::empty;
+
+use itertools::Either;
+
 use crate::syntax::{SyntaxKind::*, SyntaxNode, SyntaxToken};
 
 /// Root
@@ -88,6 +92,14 @@ impl Node {
             None
         }
     }
+
+    // pub(crate) fn element(&self) -> Option<Element> {
+    //     let implicit = self
+    //         .0
+    //         .children_with_tokens()
+    //         .find_map(|element| element.into_token().and_then(Implicit::cast));
+    //     self.0.children().find_map(Tree::cast)
+    // }
 }
 
 /// Edge

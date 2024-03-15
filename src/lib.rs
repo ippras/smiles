@@ -14,7 +14,6 @@
 
 pub use self::parser::Parser;
 
-mod ast;
 mod errors;
 mod language;
 mod lexer;
@@ -24,10 +23,10 @@ mod syntax;
 #[cfg(test)]
 mod test {
     use crate::{
-        ast::{Atom, Bond, Branch, Root, Tree},
         parser::Parser,
         syntax::{
-            SyntaxKind::{self, *},
+            ast::{Branch, Root, Tree},
+            st::{Atom, Bond},
             SyntaxNode, SyntaxToken,
         },
     };
@@ -40,7 +39,7 @@ mod test {
 
     #[test]
     fn lexer() {
-        let parser = Parser::new("[14OH-1:5555]");
+        let parser = Parser::new("C(OCC)(=C)=CC");
         for lexeme in parser.lexer {
             println!("{lexeme:?}");
         }
@@ -48,7 +47,7 @@ mod test {
 
     #[test]
     fn parser() {
-        let parser = Parser::new("C([O])(=C)=CC");
+        let parser = Parser::new("C9([O])(=C)=CC");
         let parse = parser.parse().unwrap();
         let root = parse.syntax();
         for child in root.children() {
@@ -85,10 +84,17 @@ mod test {
             let from = graph.add_node(node.into());
             // println!("from: {from:?}");
             for branch in tree.branches() {
-                let tree = branch.tree().unwrap();
-                let to = walk(graph, &tree);
-                let edge = branch.edge().map(Into::into);
-                graph.add_edge(from, to, edge);
+                match branch {
+                    Branch::Indexed(indexed) => {
+                        // TODO
+                    }
+                    Branch::Unindexed(unindexed) => {
+                        let tree = unindexed.tree().unwrap();
+                        let to = walk(graph, &tree);
+                        let edge = unindexed.edge().map(Into::into);
+                        graph.add_edge(from, to, edge);
+                    }
+                }
             }
             from
         }

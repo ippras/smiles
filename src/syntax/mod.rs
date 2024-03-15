@@ -5,12 +5,21 @@ pub type SyntaxNode = rowan::SyntaxNode<Language>;
 
 pub type SyntaxToken = rowan::SyntaxToken<Language>;
 
+#[derive(Clone, Copy, Debug, Eq, Hash, Logos, Ord, PartialEq, PartialOrd)]
+#[repr(u16)]
+pub enum Sign {
+    #[token("*")]
+    ASTERISK,
+    #[token("@")]
+    AT,
+}
+
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Logos, Ord, PartialEq, PartialOrd)]
 #[repr(u16)]
 pub enum SyntaxKind {
     #[token("*")]
-    ASTERISK,
+    STAR,
     #[token("@")]
     AT,
     #[token("\\")]
@@ -24,7 +33,7 @@ pub enum SyntaxKind {
     #[token("-")]
     MINUS,
     #[token("#")]
-    NUMBER,
+    HASH,
     #[token("%")]
     PERCENT,
     #[token(".")]
@@ -50,31 +59,23 @@ pub enum SyntaxKind {
     #[regex("[0-9]")]
     DIGIT,
 
-    // Explicit symbol
-    // #[regex("Ac|Ag|Al|Am|Ar|as|As|At|Au|Ba|Be|Bh|Bi|Bk|Ca|Cd|Ce|Cf|Cm|Cn|Co|Cr|Cs|Cu|Db|Ds|Dy|Er|Es|Eu|Fe|Fl|Fm|Fr|Ga|Gd|Ge|He|Hf|Hg|Ho|Hs|In|Ir|K|Kr|La|Li|Lr|Lu|Lv|Md|Mg|Mn|Mo|Mt|Na|Nb|Nd|Ne|Ni|No|Np|Os|Pa|Pb|Pd|Pm|Po|Pr|Pt|Pu|Ra|Rb|Re|Rf|Rg|Rh|Rn|Ru|Sb|Sc|se|Se|Sg|Si|Sm|Sn|Sr|Ta|Tb|Tc|Te|Th|Ti|Tl|Tm|U|V|W|Xe|Y|Yb|Zn|Zr")]
-    #[regex("[KUVWY]|He|Li|Be|Ne|Na|Mg|Al|Si|Ar|Ca|Sc|Ti|Cr|Mn|Fe|Co|Ni|Cu|Zn|Ga|Ge|As|Se|Kr|Rb|Sr|Zr|Nb|Mo|Tc|Ru|Rh|Pd|Ag|Cd|In|Sn|Sb|Te|Xe|Cs|Ba|Hf|Ta|Re|Os|Ir|Pt|Au|Hg|Tl|Pb|Bi|Po|At|Rn|Fr|Ra|Rf|Db|Sg|Bh|Hs|Mt|Ds|Rg|Cn|Fl|Lv|La|Ce|Pr|Nd|Pm|Sm|Eu|Gd|Tb|Dy|Ho|Er|Tm|Yb|Lu|Ac|Th|Pa|Np|Pu|Am|Cm|Bk|Cf|Es|Fm|Md|No|Lr|as|se")]
-    EXPLICIT,
-    // Implicit symbol
-    #[regex("[BCFINOPS]|Cl|Br|[bcnops]")]
+    // Implicit
+    #[regex("[BCFINOPS]|[bcnops]|Cl|Br")]
     IMPLICIT,
-
-    #[regex("[]|Cl|Br|[bcnops]")]
-    B,
-    C,
-    F,
-    I,
-    N,
-    O,
-    P,
-    S,
+    // Explicit
+    #[regex("[KUVWY]|Ac|Ag|Al|Am|Ar|As|At|Au|Ba|Be|Bh|Bi|Bk|Ca|Cd|Ce|Cf|Cm|Cn|Co|Cr|Cs|Cu|Db|Ds|Dy|Er|Es|Eu|Fe|Fl|Fm|Fr|Ga|Gd|Ge|He|Hf|Hg|Ho|Hs|In|Ir|Kr|La|Li|Lr|Lu|Lv|Md|Mg|Mn|Mo|Mt|Na|Nb|Nd|Ne|Ni|No|Np|Os|Pa|Pb|Pd|Pm|Po|Pr|Pt|Pu|Ra|Rb|Re|Rf|Rg|Rh|Rn|Ru|Sb|Sc|Se|Sg|Si|Sm|Sn|Sr|Ta|Tb|Tc|Te|Th|Ti|Tl|Tm|Xe|Yb|Zn|Zr|as|se")]
+    EXPLICIT,
     #[token("H")]
     H,
 
+    // COMPLEX,
+    // SIMPLE,
     BRACKETS,
 
     BRANCH,
     BRANCHES,
-    CLOSURE,
+    INDEXED,
+    UNINDEXED,
     EDGE,
     NODE,
     TREE,
@@ -99,6 +100,9 @@ impl From<SyntaxKind> for rowan::SyntaxKind {
         Self(value as _)
     }
 }
+
+pub(crate) mod ast;
+pub(crate) mod st;
 
 // String            ::= sequence?
 // sequence          ::= atom ( union | branch | gap )*

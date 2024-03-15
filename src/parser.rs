@@ -71,7 +71,7 @@ impl<'a> Parser<'a> {
     fn tree(&mut self) -> Result<()> {
         self.builder.start_node(TREE.into());
         self.node()?;
-        if self.is_closure() || self.is_branch() {
+        if self.is_indexed() || self.is_unindexed() {
             self.branches()?;
         }
         self.builder.finish_node(); // TREE
@@ -81,42 +81,45 @@ impl<'a> Parser<'a> {
     fn branches(&mut self) -> Result<()> {
         self.builder.start_node(BRANCHES.into());
         loop {
-            if self.is_closure() {
-                self.closure();
+            if self.is_indexed() {
+                self.indexed();
             } else if self.peek(0) == Some(LEFT_PAREN) {
                 self.parentheses()?;
             } else {
-                break self.branch()?;
+                break self.unindexed()?;
             }
         }
         self.builder.finish_node(); // BRANCHES
         Ok(())
     }
 
-    fn closure(&mut self) {
-        self.builder.start_node(CLOSURE.into());
+    /// Indexed branch
+    fn indexed(&mut self) {
+        self.builder.start_node(INDEXED.into());
         if self.is_edge() {
             self.edge(); // EDGE
         }
         self.builder.start_node(INDEX.into());
         self.bump(); // DIGIT
         self.builder.finish_node(); // INDEX
-        self.builder.finish_node(); // CLOSURE
+        self.builder.finish_node(); // INDEXED
     }
 
-    fn branch(&mut self) -> Result<()> {
-        self.builder.start_node(BRANCH.into());
+    /// Unindexed branch
+    fn unindexed(&mut self) -> Result<()> {
+        self.builder.start_node(UNINDEXED.into());
         if self.is_edge() {
             self.edge(); // EDGE
         }
         self.tree()?; // TREE
-        self.builder.finish_node(); // BRANCH
+        self.builder.finish_node(); // UNINDEXED
         Ok(())
     }
 
+    /// Unindexed parentheses branch
     fn parentheses(&mut self) -> Result<()> {
         self.bump(); // LEFT_PAREN
-        self.branch()?;
+        self.unindexed()?;
         if self.peek(0) != Some(RIGHT_PAREN) {
             return Err(self.error(&[RIGHT_PAREN]));
         }
@@ -124,43 +127,38 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn is_branch(&mut self) -> bool {
+    fn is_indexed(&mut self) -> bool {
+        self.peek(0) == Some(DIGIT) || self.is_edge() && self.peek(1) == Some(DIGIT)
+    }
+
+    fn is_unindexed(&mut self) -> bool {
         self.peek(0) == Some(LEFT_PAREN) || self.is_node(0) || self.is_edge() && self.is_node(1)
     }
 
-    fn is_closure(&mut self) -> bool {
-        self.peek(0) == Some(DIGIT) || (self.is_edge() && self.peek(1) == Some(DIGIT))
-    }
-
     fn is_node(&mut self, index: usize) -> bool {
-        matches!(self.peek(index), Some(ASTERISK | LEFT_BRACKET)) || self.is_implicit(index)
-    }
-
-    fn is_implicit(&mut self, index: usize) -> bool {
-        matches!(
-            self.peek(index),
-            Some(CL | BR | B | C | F | I | N | O | P | S),
-        )
+        matches!(self.peek(index), Some(IMPLICIT | LEFT_BRACKET | STAR))
     }
 
     fn is_edge(&mut self) -> bool {
         matches!(
             self.peek(0),
-            Some(BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | NUMBER | SLASH),
+            Some(BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | HASH | SLASH),
         )
     }
 
+    /// Node
     fn node(&mut self) -> Result<()> {
         self.builder.start_node(NODE.into());
         match self.peek(0) {
             Some(LEFT_BRACKET) => self.brackets()?,
-            Some(ASTERISK | CL | BR | B | C | F | I | N | O | P | S) => self.bump(),
-            _ => return Err(self.error(&[ASTERISK, LEFT_BRACKET, CL, BR, B, C, F, I, N, O, P, S])),
+            Some(IMPLICIT | STAR) => self.bump(),
+            _ => return Err(self.error(&[IMPLICIT, LEFT_BRACKET, STAR])),
         }
         self.builder.finish_node(); // NODE
         Ok(())
     }
 
+    /// Brackets node
     fn brackets(&mut self) -> Result<()> {
         self.builder.start_node(BRACKETS.into());
         self.bump(); // LEFT_BRACKET
@@ -170,8 +168,8 @@ impl<'a> Parser<'a> {
             self.builder.finish_node(); // ISOTOPE
         }
         match self.peek(0) {
-            Some(ASTERISK | EXPLICIT | H | IMPLICIT) => self.bump(),
-            _ => return Err(self.error(&[ASTERISK, EXPLICIT, H, IMPLICIT])),
+            Some(EXPLICIT | H | IMPLICIT | STAR) => self.bump(),
+            _ => return Err(self.error(&[EXPLICIT, H, IMPLICIT, STAR])),
         }
         if let Some(AT) = self.peek(0) {
             self.builder.start_node(PARITY.into());
@@ -189,7 +187,7 @@ impl<'a> Parser<'a> {
             }
             self.builder.finish_node(); // HYDROGENS
         }
-        if let Some(PLUS | MINUS) = self.peek(0) {
+        if let Some(MINUS | PLUS) = self.peek(0) {
             self.builder.start_node(CHARGE.into());
             self.signed(); // SIGNED
             self.builder.finish_node(); // CHARGE
@@ -207,13 +205,13 @@ impl<'a> Parser<'a> {
             return Err(self.error(&[RIGHT_BRACKET]));
         }
         self.bump(); // RIGHT_BRACKET
-        self.builder.finish_node();
+        self.builder.finish_node(); // BRACKETS
         Ok(())
     }
 
     fn edge(&mut self) {
         self.builder.start_node(EDGE.into());
-        self.bump(); // BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | NUMBER | SLASH
+        self.bump(); // BACKSLASH | COLON | DOLLAR | EQUALS | MINUS | HASH | SLASH
         self.builder.finish_node();
     }
 

@@ -1,4 +1,4 @@
-use crate::syntax::SyntaxKind;
+use crate::syntax::{SyntaxKind, SyntaxKind::ERROR};
 use logos::Logos;
 use rowan::{TextRange, TextSize};
 use smol_str::SmolStr;
@@ -25,7 +25,7 @@ impl Iterator for Lexer<'_> {
     type Item = Lexeme;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let kind = self.lexer.next()?.unwrap();
+        let kind = self.lexer.next()?.unwrap_or(ERROR);
         let text = SmolStr::from(self.lexer.slice());
         let Range { start, end } = self.lexer.span();
         let start = TextSize::try_from(start).unwrap();

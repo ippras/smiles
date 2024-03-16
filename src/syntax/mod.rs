@@ -92,6 +92,7 @@ pub enum SyntaxKind {
     SIGNED,
 
     END_OF_STRING,
+    ERROR,
     ROOT,
 }
 

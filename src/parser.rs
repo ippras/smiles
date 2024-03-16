@@ -71,7 +71,7 @@ impl<'a> Parser<'a> {
     fn tree(&mut self) -> Result<()> {
         self.builder.start_node(TREE.into());
         self.node()?;
-        if self.is_indexed() || self.is_unindexed() {
+        if matches!(self.peek(0), Some(token) if token != RIGHT_PAREN) {
             self.branches()?;
         }
         self.builder.finish_node(); // TREE
@@ -116,7 +116,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    /// Unindexed parentheses branch
+    /// Parentheses unindexed branch
     fn parentheses(&mut self) -> Result<()> {
         self.bump(); // LEFT_PAREN
         self.unindexed()?;
@@ -125,6 +125,10 @@ impl<'a> Parser<'a> {
         }
         self.bump(); // RIGHT_PAREN
         Ok(())
+    }
+
+    fn is_branch(&mut self) -> bool {
+        self.is_indexed() || self.is_unindexed()
     }
 
     fn is_indexed(&mut self) -> bool {

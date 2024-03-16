@@ -47,7 +47,7 @@ mod test {
 
     #[test]
     fn parser() {
-        let parser = Parser::new("C9([O])(=C)=CC");
+        let parser = Parser::new("C9([O])(=C)(CC)=CC");
         let parse = parser.parse().unwrap();
         let root = parse.syntax();
         for child in root.children() {

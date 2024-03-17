@@ -25,7 +25,7 @@ mod test {
     use crate::{
         parser::Parser,
         syntax::{
-            ast::{Branch, Root, Tree},
+            ast::{Branch, Root, SyntaxNodeExt, Tree},
             st::{Atom, Bond},
             SyntaxNode, SyntaxToken,
         },
@@ -47,7 +47,7 @@ mod test {
 
     #[test]
     fn parser() {
-        let parser = Parser::new("C9([O])(=C)(CC)=CC");
+        let parser = Parser::new("[9C-3](O*C)(=C)=CC");
         let parse = parser.parse().unwrap();
         let root = parse.syntax();
         for child in root.children() {
@@ -73,16 +73,14 @@ mod test {
     #[test]
     fn test() {
         let mut graph = Graph::new_undirected();
-        let parser = Parser::new("C(OCC)(=C)=CC");
+        let parser = Parser::new("[9C-3](O*C)(=C)=CC");
         let parse = parser.parse().unwrap();
-        let root = Root::cast(parse.syntax()).unwrap();
+        let root = parse.syntax().cast::<Root>().unwrap();
         walk(&mut graph, &root.tree().unwrap());
 
         fn walk(graph: &mut Graph<Atom, Option<Bond>, Undirected>, tree: &Tree) -> NodeIndex {
             let node = tree.node().unwrap();
-            // println!("node: {node:?}");
-            let from = graph.add_node(node.into());
-            // println!("from: {from:?}");
+            let from = graph.add_node(node.try_into().unwrap());
             for branch in tree.branches() {
                 match branch {
                     Branch::Indexed(indexed) => {
@@ -91,8 +89,8 @@ mod test {
                     Branch::Unindexed(unindexed) => {
                         let tree = unindexed.tree().unwrap();
                         let to = walk(graph, &tree);
-                        let edge = unindexed.edge().map(Into::into);
-                        graph.add_edge(from, to, edge);
+                        // let edge = unindexed.edge().map(TryInto::try_into).transpose().unwrap();
+                        // graph.add_edge(from, to, edge);
                     }
                 }
             }

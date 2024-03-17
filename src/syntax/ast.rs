@@ -1,43 +1,41 @@
-use crate::syntax::{SyntaxKind::*, SyntaxNode, SyntaxToken};
+use crate::{
+    errors::{Error, SemanticError},
+    syntax::{
+        st::{Bond, Element},
+        SyntaxKind::{self, *},
+        SyntaxNode, SyntaxToken,
+    },
+};
 use itertools::Either;
-use rowan::NodeOrToken;
-use std::iter::empty;
-
-use super::SyntaxKind;
+use rowan::{NodeOrToken, SyntaxText};
+use smol_str::{SmolStr, ToSmolStr};
+use std::{iter::empty, num::ParseIntError, str::FromStr};
 
 /// Root
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) struct Root(pub(crate) SyntaxNode);
+pub(crate) struct Root(SyntaxNode);
 
 impl Root {
-    #[allow(unused)]
-    pub(crate) fn cast(node: SyntaxNode) -> Option<Self> {
+    pub(crate) fn tree(&self) -> Option<Tree> {
+        self.0.children().find_map(Tree::cast)
+    }
+}
+
+impl Cast for Root {
+    fn cast(node: SyntaxNode) -> Option<Self> {
         if node.kind() == ROOT {
             Some(Self(node))
         } else {
             None
         }
     }
-
-    pub(crate) fn tree(&self) -> Option<Tree> {
-        self.0.children().find_map(Tree::cast)
-    }
 }
 
 /// Tree
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) struct Tree(pub(crate) SyntaxNode);
+pub(crate) struct Tree(SyntaxNode);
 
 impl Tree {
-    #[allow(unused)]
-    pub(crate) fn cast(node: SyntaxNode) -> Option<Self> {
-        if node.kind() == TREE {
-            Some(Self(node))
-        } else {
-            None
-        }
-    }
-
     pub(crate) fn node(&self) -> Option<Node> {
         self.0.children().find_map(Node::cast)
     }
@@ -53,15 +51,24 @@ impl Tree {
     }
 }
 
+impl Cast for Tree {
+    fn cast(node: SyntaxNode) -> Option<Self> {
+        if node.kind() == TREE {
+            Some(Self(node))
+        } else {
+            None
+        }
+    }
+}
+
 /// Branch
 pub(crate) enum Branch {
     Indexed(Indexed),
     Unindexed(Unindexed),
 }
 
-impl Branch {
-    #[allow(unused)]
-    pub(crate) fn cast(node: SyntaxNode) -> Option<Self> {
+impl Cast for Branch {
+    fn cast(node: SyntaxNode) -> Option<Self> {
         match node.kind() {
             INDEXED => Some(Self::Indexed(Indexed(node))),
             UNINDEXED => Some(Self::Unindexed(Unindexed(node))),
@@ -79,8 +86,8 @@ impl Indexed {
         self.0.children().find_map(Edge::cast)
     }
 
-    pub(crate) fn index(&self) -> Option<usize> {
-        self.0.node(INDEX)?.token(DIGIT)?.text().parse().ok()
+    pub(crate) fn index(&self) -> Option<SyntaxText> {
+        Some(self.0.node(INDEX)?.text())
     }
 }
 
@@ -100,34 +107,70 @@ impl Unindexed {
 
 /// Branch
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) struct Node(pub(crate) SyntaxNode);
+pub(crate) struct Node(SyntaxNode);
 
 impl Node {
-    #[allow(unused)]
-    pub(crate) fn cast(node: SyntaxNode) -> Option<Self> {
+    // pub(crate) fn isotope(&self) -> Result<Option<u16>, SemanticError> {
+    //     match self.0.node(ISOTOPE) {
+    //         None => Ok(None),
+    //         Some(node) => Ok(Some(node.to_smolstr().parse()?)),
+    //     }
+    // }
+
+    pub(crate) fn isotope(&self) -> Result<Option<u16>, SemanticError> {
+        match self.0.node(ISOTOPE) {
+            None => Ok(None),
+            Some(node) => Ok(Some(node.to_smolstr().parse()?)),
+        }
+    }
+
+    pub(crate) fn element(&self) -> Result<Option<Element>, SemanticError> {
+        match self.0.node(ELEMENT) {
+            None => Err(SemanticError::ElementNotFound),
+            Some(node) if node.text() == "*" => Ok(None),
+            Some(node) => Ok(Some(node.to_smolstr().parse()?)),
+        }
+    }
+
+    pub(crate) fn charge(&self) -> Result<Option<i8>, SemanticError> {
+        match self.0.node(CHARGE) {
+            None => Ok(None),
+            Some(node) => Ok(Some(node.to_smolstr().parse()?)),
+        }
+    }
+}
+
+impl Cast for Node {
+    fn cast(node: SyntaxNode) -> Option<Self> {
         if node.kind() == NODE {
             Some(Self(node))
         } else {
             None
         }
     }
-
-    // pub(crate) fn element(&self) -> Option<Element> {
-    //     let implicit = self
-    //         .0
-    //         .children_with_tokens()
-    //         .find_map(|element| element.into_token().and_then(Implicit::cast));
-    //     self.0.children().find_map(Tree::cast)
-    // }
 }
 
 /// Edge
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) struct Edge(pub(crate) SyntaxNode);
+pub(crate) struct Edge(SyntaxNode);
 
 impl Edge {
-    #[allow(unused)]
-    pub(crate) fn cast(node: SyntaxNode) -> Option<Self> {
+    pub(crate) fn bond(&self) -> Option<Bond> {
+        self.0.map(|kind| match kind {
+            MINUS => Some(Bond::Single),
+            EQUALS => Some(Bond::Double),
+            HASH => Some(Bond::Triple),
+            DOLLAR => Some(Bond::Quadruple),
+            COLON => Some(Bond::Aromatic),
+            SLASH => Some(Bond::Up),
+            BACKSLASH => Some(Bond::Down),
+            _ => None,
+        })
+    }
+}
+
+impl Cast for Edge {
+    fn cast(node: SyntaxNode) -> Option<Self> {
         if node.kind() == EDGE {
             Some(Self(node))
         } else {
@@ -136,28 +179,27 @@ impl Edge {
     }
 }
 
-/// Implicit
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) struct Implicit(SyntaxToken);
-
-impl Implicit {
-    #[allow(unused)]
-    pub(crate) fn cast(token: SyntaxToken) -> Option<Self> {
-        if token.kind() == IMPLICIT {
-            Some(Self(token))
-        } else {
-            None
-        }
-    }
+/// Cast
+pub(crate) trait Cast: Sized {
+    fn cast(node: SyntaxNode) -> Option<Self>;
 }
 
-trait SyntaxNodeExt {
+/// Syntax node ext
+pub(crate) trait SyntaxNodeExt {
+    fn cast<T: Cast>(self) -> Option<T>;
+
     fn node(&self, kind: SyntaxKind) -> Option<SyntaxNode>;
 
     fn token(&self, kind: SyntaxKind) -> Option<SyntaxToken>;
+
+    fn map<T>(&self, f: impl Fn(SyntaxKind) -> Option<T>) -> Option<T>;
 }
 
 impl SyntaxNodeExt for SyntaxNode {
+    fn cast<T: Cast>(self) -> Option<T> {
+        Cast::cast(self)
+    }
+
     fn node(&self, kind: SyntaxKind) -> Option<SyntaxNode> {
         self.children().find(|node| node.kind() == kind)
     }
@@ -166,5 +208,10 @@ impl SyntaxNodeExt for SyntaxNode {
         self.children_with_tokens()
             .filter_map(NodeOrToken::into_token)
             .find(|token| token.kind() == kind)
+    }
+
+    fn map<T>(&self, f: impl Fn(SyntaxKind) -> Option<T>) -> Option<T> {
+        self.children_with_tokens()
+            .find_map(|node_or_token| f(node_or_token.kind()))
     }
 }

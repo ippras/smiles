@@ -5,15 +5,6 @@ pub type SyntaxNode = rowan::SyntaxNode<Language>;
 
 pub type SyntaxToken = rowan::SyntaxToken<Language>;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Logos, Ord, PartialEq, PartialOrd)]
-#[repr(u16)]
-pub enum Sign {
-    #[token("*")]
-    ASTERISK,
-    #[token("@")]
-    AT,
-}
-
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Logos, Ord, PartialEq, PartialOrd)]
 #[repr(u16)]
@@ -70,20 +61,18 @@ pub enum SyntaxKind {
 
     // COMPLEX,
     // SIMPLE,
-    BRACKETS,
-
     BRANCH,
     BRANCHES,
-    INDEXED,
-    UNINDEXED,
     EDGE,
+    INDEX,
+    INDEXED,
     NODE,
     TREE,
+    UNINDEXED,
 
-    INDEX,
-    ATOM,
     CHARGE,
     CLASS,
+    ELEMENT,
     HYDROGENS,
     ISOTOPE,
     PARITY,

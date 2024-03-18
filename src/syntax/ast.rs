@@ -1,15 +1,15 @@
-use crate::{
-    errors::{Error, SemanticError},
-    syntax::{
-        st::{Bond, Element},
-        SyntaxKind::{self, *},
-        SyntaxNode, SyntaxToken,
-    },
+use crate::syntax::{
+    SyntaxKind::{self, *},
+    SyntaxNode, SyntaxToken,
 };
 use itertools::Either;
 use rowan::{NodeOrToken, SyntaxText};
-use smol_str::{SmolStr, ToSmolStr};
-use std::{iter::empty, num::ParseIntError, str::FromStr};
+use std::{iter::empty, ops::Deref};
+
+/// Cast
+pub(crate) trait Cast: Sized {
+    fn cast(node: SyntaxNode) -> Option<Self>;
+}
 
 /// Root
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -109,37 +109,6 @@ impl Unindexed {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct Node(SyntaxNode);
 
-impl Node {
-    // pub(crate) fn isotope(&self) -> Result<Option<u16>, SemanticError> {
-    //     match self.0.node(ISOTOPE) {
-    //         None => Ok(None),
-    //         Some(node) => Ok(Some(node.to_smolstr().parse()?)),
-    //     }
-    // }
-
-    pub(crate) fn isotope(&self) -> Result<Option<u16>, SemanticError> {
-        match self.0.node(ISOTOPE) {
-            None => Ok(None),
-            Some(node) => Ok(Some(node.to_smolstr().parse()?)),
-        }
-    }
-
-    pub(crate) fn element(&self) -> Result<Option<Element>, SemanticError> {
-        match self.0.node(ELEMENT) {
-            None => Err(SemanticError::ElementNotFound),
-            Some(node) if node.text() == "*" => Ok(None),
-            Some(node) => Ok(Some(node.to_smolstr().parse()?)),
-        }
-    }
-
-    pub(crate) fn charge(&self) -> Result<Option<i8>, SemanticError> {
-        match self.0.node(CHARGE) {
-            None => Ok(None),
-            Some(node) => Ok(Some(node.to_smolstr().parse()?)),
-        }
-    }
-}
-
 impl Cast for Node {
     fn cast(node: SyntaxNode) -> Option<Self> {
         if node.kind() == NODE {
@@ -150,24 +119,17 @@ impl Cast for Node {
     }
 }
 
+impl Deref for Node {
+    type Target = SyntaxNode;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 /// Edge
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct Edge(SyntaxNode);
-
-impl Edge {
-    pub(crate) fn bond(&self) -> Option<Bond> {
-        self.0.map(|kind| match kind {
-            MINUS => Some(Bond::Single),
-            EQUALS => Some(Bond::Double),
-            HASH => Some(Bond::Triple),
-            DOLLAR => Some(Bond::Quadruple),
-            COLON => Some(Bond::Aromatic),
-            SLASH => Some(Bond::Up),
-            BACKSLASH => Some(Bond::Down),
-            _ => None,
-        })
-    }
-}
 
 impl Cast for Edge {
     fn cast(node: SyntaxNode) -> Option<Self> {
@@ -179,9 +141,12 @@ impl Cast for Edge {
     }
 }
 
-/// Cast
-pub(crate) trait Cast: Sized {
-    fn cast(node: SyntaxNode) -> Option<Self>;
+impl Deref for Edge {
+    type Target = SyntaxNode;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 /// Syntax node ext
@@ -191,8 +156,6 @@ pub(crate) trait SyntaxNodeExt {
     fn node(&self, kind: SyntaxKind) -> Option<SyntaxNode>;
 
     fn token(&self, kind: SyntaxKind) -> Option<SyntaxToken>;
-
-    fn map<T>(&self, f: impl Fn(SyntaxKind) -> Option<T>) -> Option<T>;
 }
 
 impl SyntaxNodeExt for SyntaxNode {
@@ -208,10 +171,5 @@ impl SyntaxNodeExt for SyntaxNode {
         self.children_with_tokens()
             .filter_map(NodeOrToken::into_token)
             .find(|token| token.kind() == kind)
-    }
-
-    fn map<T>(&self, f: impl Fn(SyntaxKind) -> Option<T>) -> Option<T> {
-        self.children_with_tokens()
-            .find_map(|node_or_token| f(node_or_token.kind()))
     }
 }

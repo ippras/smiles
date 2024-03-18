@@ -18,15 +18,16 @@ mod errors;
 mod language;
 mod lexer;
 mod parser;
+mod semantic;
 mod syntax;
 
 #[cfg(test)]
 mod test {
     use crate::{
         parser::Parser,
+        semantic::{Atom, Bond},
         syntax::{
             ast::{Branch, Root, SyntaxNodeExt, Tree},
-            st::{Atom, Bond},
             SyntaxNode, SyntaxToken,
         },
     };
@@ -73,7 +74,7 @@ mod test {
     #[test]
     fn test() {
         let mut graph = Graph::new_undirected();
-        let parser = Parser::new("[9C-3](O*C)(=C)=CC");
+        let parser = Parser::new("C2(O*C)(=C)=CC2");
         let parse = parser.parse().unwrap();
         let root = parse.syntax().cast::<Root>().unwrap();
         walk(&mut graph, &root.tree().unwrap());
@@ -89,8 +90,8 @@ mod test {
                     Branch::Unindexed(unindexed) => {
                         let tree = unindexed.tree().unwrap();
                         let to = walk(graph, &tree);
-                        // let edge = unindexed.edge().map(TryInto::try_into).transpose().unwrap();
-                        // graph.add_edge(from, to, edge);
+                        let edge = unindexed.edge().map(Into::into);
+                        graph.add_edge(from, to, edge);
                     }
                 }
             }

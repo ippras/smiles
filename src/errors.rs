@@ -1,5 +1,5 @@
-use crate::{lexer::Lexeme, syntax::SyntaxKind};
-use std::num::ParseIntError;
+pub use crate::{semantic::Error as SemanticError, syntax::Error as SyntaxError};
+
 use thiserror::Error;
 
 /// Result
@@ -12,27 +12,4 @@ pub enum Error {
     Syntax(#[from] SyntaxError),
     #[error(transparent)]
     Semantic(#[from] SemanticError),
-}
-
-/// Semantic error
-#[derive(Clone, Error, Debug)]
-pub enum SemanticError {
-    #[error(transparent)]
-    ParseInt(#[from] ParseIntError),
-    #[error(transparent)]
-    UnknownElement(#[from] UnknownElement),
-    #[error("element not found")]
-    ElementNotFound,
-}
-
-/// Unknown element
-#[derive(Clone, Copy, Debug, Default, Error)]
-#[error("unknown element")]
-pub struct UnknownElement;
-
-#[derive(Clone, Error, Debug)]
-#[error("syntax error {{ expected: {expected:?}, found: {found:?} }}")]
-pub struct SyntaxError {
-    pub expected: &'static [SyntaxKind],
-    pub found: Lexeme,
 }

@@ -37,7 +37,7 @@ impl Iterator for Lexer<'_> {
 
 /// Lexeme
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Lexeme {
+pub struct Lexeme {
     pub(crate) kind: SyntaxKind,
     pub(crate) text: SmolStr,
     pub(crate) range: TextRange,

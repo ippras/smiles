@@ -1,99 +1,3 @@
-use crate::language::Language;
-use logos::Logos;
-
-pub type SyntaxNode = rowan::SyntaxNode<Language>;
-
-pub type SyntaxToken = rowan::SyntaxToken<Language>;
-
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, Hash, Logos, Ord, PartialEq, PartialOrd)]
-#[repr(u16)]
-pub enum SyntaxKind {
-    #[token("*")]
-    STAR,
-    #[token("@")]
-    AT,
-    #[token("\\")]
-    BACKSLASH,
-    #[token(":")]
-    COLON,
-    #[token("$")]
-    DOLLAR,
-    #[token("=")]
-    EQUALS,
-    #[token("-")]
-    MINUS,
-    #[token("#")]
-    HASH,
-    #[token("%")]
-    PERCENT,
-    #[token(".")]
-    PERIOD,
-    #[token("+")]
-    PLUS,
-    #[token("/")]
-    SLASH,
-
-    #[token("[")]
-    LEFT_BRACKET,
-    #[token("{")]
-    LEFT_CURLY,
-    #[token("(")]
-    LEFT_PAREN,
-    #[token("]")]
-    RIGHT_BRACKET,
-    #[token("}")]
-    RIGHT_CURLY,
-    #[token(")")]
-    RIGHT_PAREN,
-
-    #[regex("[0-9]")]
-    DIGIT,
-
-    // Implicit
-    #[regex("[BCFINOPS]|[bcnops]|Cl|Br")]
-    IMPLICIT,
-    // Explicit
-    #[regex("[KUVWY]|Ac|Ag|Al|Am|Ar|As|At|Au|Ba|Be|Bh|Bi|Bk|Ca|Cd|Ce|Cf|Cm|Cn|Co|Cr|Cs|Cu|Db|Ds|Dy|Er|Es|Eu|Fe|Fl|Fm|Fr|Ga|Gd|Ge|He|Hf|Hg|Ho|Hs|In|Ir|Kr|La|Li|Lr|Lu|Lv|Md|Mg|Mn|Mo|Mt|Na|Nb|Nd|Ne|Ni|No|Np|Os|Pa|Pb|Pd|Pm|Po|Pr|Pt|Pu|Ra|Rb|Re|Rf|Rg|Rh|Rn|Ru|Sb|Sc|Se|Sg|Si|Sm|Sn|Sr|Ta|Tb|Tc|Te|Th|Ti|Tl|Tm|Xe|Yb|Zn|Zr|as|se")]
-    EXPLICIT,
-    #[token("H")]
-    H,
-
-    // COMPLEX,
-    // SIMPLE,
-    BRANCH,
-    BRANCHES,
-    EDGE,
-    INDEX,
-    INDEXED,
-    NODE,
-    TREE,
-    UNINDEXED,
-
-    CHARGE,
-    CLASS,
-    ELEMENT,
-    HYDROGENS,
-    ISOTOPE,
-    PARITY,
-
-    UNSIGNED,
-    SIGNED,
-
-    END_OF_STRING,
-    ERROR,
-    ROOT,
-}
-
-impl From<SyntaxKind> for rowan::SyntaxKind {
-    fn from(value: SyntaxKind) -> Self {
-        Self(value as _)
-    }
-}
-
-pub(crate) mod ast;
-pub(crate) mod st;
-
 // String            ::= sequence?
 // sequence          ::= atom ( union | branch | gap )*
 // union             ::= bond? ( bridge | sequence )
@@ -137,3 +41,100 @@ pub(crate) mod st;
 // bond              ::= "-" | "=" | "#" | "/" | "\"
 // digit             ::= "0" | nonzero
 // nonzero           ::= "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+pub use self::error::Error;
+
+use crate::language::Language;
+use logos::Logos;
+
+pub(crate) type SyntaxNode = rowan::SyntaxNode<Language>;
+
+pub(crate) type SyntaxToken = rowan::SyntaxToken<Language>;
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Logos, Ord, PartialEq, PartialOrd)]
+#[repr(u16)]
+pub enum SyntaxKind {
+    #[token("*")]
+    STAR,
+    #[token("@")]
+    AT,
+    #[token("\\")]
+    BACKSLASH,
+    #[token(":")]
+    COLON,
+    #[token("$")]
+    DOLLAR,
+    #[token("=")]
+    EQUALS,
+    #[token("-")]
+    MINUS,
+    #[token("#")]
+    HASH,
+    #[token("%")]
+    PERCENT,
+    #[token(".")]
+    DOT,
+    #[token("+")]
+    PLUS,
+    #[token("/")]
+    SLASH,
+
+    #[token("[")]
+    LEFT_BRACKET,
+    #[token("{")]
+    LEFT_CURLY,
+    #[token("(")]
+    LEFT_PAREN,
+    #[token("]")]
+    RIGHT_BRACKET,
+    #[token("}")]
+    RIGHT_CURLY,
+    #[token(")")]
+    RIGHT_PAREN,
+
+    #[token("H")]
+    H,
+    #[regex("Br?|Cl?|F|I|N|O|P|S")]
+    SHORT,
+    #[regex("A[cglmrstu]|B[aeik]|C[adefmorsu]|Dy|E[rsu]|F[emr]|G[ade]|H[efgo]|I[nr]|Kr?|L[airu]|M[gno]|N[abdeiop]|Os|P[abdmortu]|R[abefhnu]|S[bceimnr]|T[abcehilm]|U|V|W|Xe|Yb?|Z[nr]")]
+    EXTENDED,
+
+    #[regex("[0-9]")]
+    DIGIT,
+
+    // COMPLEX,
+    // SIMPLE,
+    BRANCH,
+    BRANCHES,
+    EDGE,
+    INDEX,
+    INDEXED,
+    NODE,
+    TREE,
+    UNINDEXED,
+
+    CHARGE,
+    CLASS,
+    ELEMENT,
+    HYDROGENS,
+    ISOTOPE,
+    PARITY,
+
+    UNSIGNED,
+    SIGNED,
+
+    END_OF_STRING,
+    ERROR,
+    ROOT,
+}
+
+impl From<SyntaxKind> for rowan::SyntaxKind {
+    fn from(value: SyntaxKind) -> Self {
+        Self(value as _)
+    }
+}
+
+pub(crate) mod ast;
+
+mod error;

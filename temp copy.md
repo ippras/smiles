@@ -1,0 +1,1 @@
+A[cglmrstu]|B[aeikr]?|C[adeflmorsu]?|Dy|E[rsu]|F[emr]?|G[ade]|H[efgo]?|I[nr]?|Kr?|L[airu]|M[gno]|N[abdeiop]?|Os?|P[abdmortu]?|R[abefhnu]|S[bceimnr]?|T[abcehilm]|U|V|W|Xe|Yb?|Z[nr]

@@ -11,4 +11,8 @@ pub enum Error {
     ParseInt(#[from] ParseIntError),
     #[error("element not found")]
     ElementNotFound,
+    #[error("node not found")]
+    NodeNotFound,
+    #[error("tree not found")]
+    TreeNotFound,
 }

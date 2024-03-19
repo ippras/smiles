@@ -146,8 +146,8 @@ impl<'a> Parser<'a> {
         self.builder.start_node(NODE.into());
         match self.peek(0) {
             Some(LEFT_BRACKET) => self.brackets()?,
-            Some(SHORT | STAR) => self.element(),
-            _ => return Err(self.error(&[SHORT, LEFT_BRACKET, STAR])),
+            Some(ORGANIC | STAR) => self.element(),
+            _ => return Err(self.error(&[ORGANIC, LEFT_BRACKET, STAR])),
         }
         self.builder.finish_node(); // NODE
         Ok(())
@@ -162,8 +162,8 @@ impl<'a> Parser<'a> {
             self.builder.finish_node(); // ISOTOPE
         }
         match self.peek(0) {
-            Some(EXTENDED | SHORT | H | STAR) => self.element(),
-            _ => return Err(self.error(&[EXTENDED, SHORT, H, STAR])),
+            Some(ORGANIC | NONORGANIC | H | STAR) => self.element(),
+            _ => return Err(self.error(&[ORGANIC, NONORGANIC, H, STAR])),
         }
         if let Some(AT) = self.peek(0) {
             self.builder.start_node(PARITY.into());
@@ -227,7 +227,7 @@ impl<'a> Parser<'a> {
     }
 
     fn is_node(&mut self, index: usize) -> bool {
-        matches!(self.peek(index), Some(SHORT | LEFT_BRACKET | STAR))
+        matches!(self.peek(index), Some(ORGANIC | LEFT_BRACKET | STAR))
     }
 
     fn is_edge(&mut self) -> bool {

@@ -55,8 +55,6 @@ pub(crate) type SyntaxToken = rowan::SyntaxToken<Language>;
 #[derive(Clone, Copy, Debug, Eq, Hash, Logos, Ord, PartialEq, PartialOrd)]
 #[repr(u16)]
 pub enum SyntaxKind {
-    #[token("*")]
-    STAR,
     #[token("@")]
     AT,
     #[token("\\")]
@@ -65,20 +63,22 @@ pub enum SyntaxKind {
     COLON,
     #[token("$")]
     DOLLAR,
-    #[token("=")]
-    EQUALS,
-    #[token("-")]
-    MINUS,
-    #[token("#")]
-    HASH,
-    #[token("%")]
-    PERCENT,
     #[token(".")]
     DOT,
+    #[token("=")]
+    EQUALS,
+    #[token("#")]
+    HASH,
+    #[token("-")]
+    MINUS,
+    #[token("%")]
+    PERCENT,
     #[token("+")]
     PLUS,
     #[token("/")]
     SLASH,
+    #[token("*")]
+    STAR,
 
     #[token("[")]
     LEFT_BRACKET,
@@ -93,15 +93,15 @@ pub enum SyntaxKind {
     #[token(")")]
     RIGHT_PAREN,
 
-    #[token("H")]
-    H,
-    #[regex("Br?|Cl?|F|I|N|O|P|S")]
-    SHORT,
-    #[regex("A[cglmrstu]|B[aeik]|C[adefmorsu]|Dy|E[rsu]|F[emr]|G[ade]|H[efgo]|I[nr]|Kr?|L[airu]|M[gno]|N[abdeiop]|Os|P[abdmortu]|R[abefhnu]|S[bceimnr]|T[abcehilm]|U|V|W|Xe|Yb?|Z[nr]")]
-    EXTENDED,
-
     #[regex("[0-9]")]
     DIGIT,
+
+    #[regex("Br?|Cl?|F|I|N|O|P|S")]
+    ORGANIC,
+    #[regex("A[cglmrstu]|B[aeik]|C[adefmorsu]|Dy|E[rsu]|F[emr]|G[ade]|H[efgo]|I[nr]|Kr?|L[airu]|M[gno]|N[abdeiop]|Os|P[abdmortu]|R[abefhnu]|S[bceimnr]|T[abcehilm]|U|V|W|Xe|Yb?|Z[nr]")]
+    NONORGANIC,
+    #[token("H")]
+    H,
 
     // COMPLEX,
     // SIMPLE,

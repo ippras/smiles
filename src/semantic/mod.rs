@@ -1,17 +1,17 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::{Bound, Deref, DerefMut};
 
 pub use self::error::Error;
 
 use self::error::Result;
 use crate::syntax::{
-    ast::{Edge, Node, SyntaxNodeExt},
+    ast::{Branch, Edge, Node, Root, SyntaxNodeExt, Tree},
     SyntaxKind::*,
 };
 use itertools::Itertools;
 use petgraph::{
     algo::astar,
-    graph::{EdgeIndex, NodeIndex},
-    visit::{IntoNodeIdentifiers, NodeFiltered},
+    graph::{EdgeIndex, EdgeReference, NodeIndex},
+    visit::{EdgeFiltered, EdgeRef, GraphBase, IntoNodeIdentifiers, NodeFiltered},
     Graph, Undirected,
 };
 use smol_str::ToSmolStr;
@@ -20,25 +20,27 @@ use smol_str::ToSmolStr;
 #[derive(Clone, Debug, Default)]
 pub struct MoleculeGraph(Graph<Atom, Bond, Undirected>);
 
-impl Deref for MoleculeGraph {
-    type Target = Graph<Atom, Bond, Undirected>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for MoleculeGraph {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 impl MoleculeGraph {
-    pub fn the_longest_carbon_chain(&self) -> Vec<NodeIndex> {
-        let carbons = NodeFiltered::from_fn(&**self, |index| {
+    pub fn carbons(
+        &self,
+    ) -> NodeFiltered<&Graph<Atom, Bond, Undirected>, impl Fn(NodeIndex) -> bool + '_> {
+        NodeFiltered::from_fn(self, |index| {
             matches!(self[index].element, None | Some(Element::C))
-        });
+        })
+    }
+
+    pub fn temp<'a>(
+        &'a self,
+    ) -> EdgeFiltered<&Graph<Atom, Bond, Undirected>, impl Fn(EdgeReference<'a, Bond>) -> bool + '_>
+    {
+        EdgeFiltered::from_fn(self, |edge| {
+            matches!(self[edge.source()].element, None | Some(Element::C))
+                && matches!(self[edge.target()].element, None | Some(Element::C))
+        })
+    }
+
+    pub fn the_longest_carbon_chain(&self) -> Vec<NodeIndex> {
+        let carbons = self.carbons();
         let paths = carbons
             .node_identifiers()
             .permutations(2)
@@ -56,26 +58,24 @@ impl MoleculeGraph {
 
     fn hydrogen_filling(&mut self) {
         for index in self.node_indices() {
-            let atom = self.node_weight(index).unwrap(); 
-            let desired_bonds_num = match atom.element {
-                Some(Element::C) => Some(4),
-                Some(Element::P) => Some(5),
-                Some(Element::O) => Some(2),
-                _ => None,
-            }
-            .expect("Can't handle this atom yet");
-
-            let neighbor_edges = self.edges(index).collect::<Vec<_>>();
-            let current_bonds_num: usize = neighbor_edges
-                .into_iter()
+            let atom = self.node_weight(index).unwrap();
+            let count = match atom.element {
+                Some(Element::C) => 4,
+                Some(Element::P) => 5,
+                Some(Element::O) => 2,
+                _ => unimplemented!("Atom is unimplemented"),
+            };
+            let current: usize = self
+                .edges(index)
                 .map(|bond| match bond.weight() {
                     Bond::Single => 1,
                     Bond::Double => 2,
-                    _ => panic!("Can't handle this bond type yet"),
+                    Bond::Triple => 3,
+                    Bond::Quadruple => 4,
+                    _ => unimplemented!("Bond is unimplemented"),
                 })
                 .sum();
-            let needed_hydrogen = desired_bonds_num - current_bonds_num;
-            for _ in 0..needed_hydrogen {
+            for _ in 0..count - current {
                 self.hydrogen(index);
             }
         }
@@ -87,6 +87,49 @@ impl MoleculeGraph {
             ..Default::default()
         });
         self.add_edge(from, to, Bond::Single)
+    }
+}
+
+impl Deref for MoleculeGraph {
+    type Target = Graph<Atom, Bond, Undirected>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for MoleculeGraph {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl TryFrom<Root> for MoleculeGraph {
+    type Error = Error;
+
+    fn try_from(value: Root) -> Result<Self, Self::Error> {
+        let mut graph = MoleculeGraph(Graph::new_undirected());
+        walk(&mut graph, &value.tree().ok_or(Error::TreeNotFound)?)?;
+        return Ok(graph);
+
+        fn walk(graph: &mut MoleculeGraph, tree: &Tree) -> Result<NodeIndex> {
+            let node = tree.node().ok_or(Error::NodeNotFound)?;
+            let from = graph.add_node(node.try_into()?);
+            for branch in tree.branches() {
+                match branch {
+                    Branch::Indexed(indexed) => {
+                        // TODO
+                    }
+                    Branch::Unindexed(unindexed) => {
+                        let tree = unindexed.tree().ok_or(Error::TreeNotFound)?;
+                        let to = walk(graph, &tree)?;
+                        let edge = unindexed.edge().map_or_else(Default::default, Into::into);
+                        graph.add_edge(from, to, edge);
+                    }
+                }
+            }
+            Ok(from)
+        }
     }
 }
 
@@ -236,8 +279,9 @@ impl TryFrom<Node> for Atom {
 }
 
 /// Bond
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum Bond {
+    #[default]
     Single,
     Double,
     Triple,

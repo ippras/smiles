@@ -25,7 +25,7 @@ mod syntax;
 mod test {
     use crate::{
         parser::Parser,
-        semantic::{Atom, Bond},
+        semantic::{Atom, Bond, MoleculeGraph},
         syntax::{
             ast::{Branch, Root, SyntaxNodeExt, Tree},
             SyntaxNode, SyntaxToken,
@@ -33,7 +33,7 @@ mod test {
     };
     use petgraph::{
         graph::{node_index, NodeIndex, UnGraph},
-        visit::{depth_first_search, Bfs, Control, Dfs, DfsEvent},
+        visit::{depth_first_search, Bfs, Control, Dfs, DfsEvent, IntoNodeIdentifiers},
         Graph, Undirected,
     };
     use rowan::NodeOrToken;
@@ -73,36 +73,21 @@ mod test {
 
     #[test]
     fn test() {
-        let mut graph = Graph::new_undirected();
-        let parser = Parser::new("C2(O*C)(=C)=CC2");
+        // let parser = Parser::new("CCCCCCCCCCCCCC(=O)O");
+        let parser = Parser::new("CCCCCCC=CCCCCCCCC(=O)O");
         let parse = parser.parse().unwrap();
         let root = parse.syntax().cast::<Root>().unwrap();
-        walk(&mut graph, &root.tree().unwrap());
-
-        fn walk(graph: &mut Graph<Atom, Option<Bond>, Undirected>, tree: &Tree) -> NodeIndex {
-            let node = tree.node().unwrap();
-            let from = graph.add_node(node.try_into().unwrap());
-            for branch in tree.branches() {
-                match branch {
-                    Branch::Indexed(indexed) => {
-                        // TODO
-                    }
-                    Branch::Unindexed(unindexed) => {
-                        let tree = unindexed.tree().unwrap();
-                        let to = walk(graph, &tree);
-                        let edge = unindexed.edge().map(Into::into);
-                        graph.add_edge(from, to, edge);
-                    }
-                }
-            }
-            from
-        }
+        let graph = MoleculeGraph::try_from(root).unwrap();
 
         println!("{graph:?}");
 
-        for node in graph.node_weights() {
-            println!("node: {node:?}");
-        }
+        // for carbon in graph.carbons().node_identifiers() {
+        //     println!("node: {:?}", atom.element);
+        // }
+
+        // for atom in graph.node_weights() {
+        //     println!("node: {:?}", atom.element);
+        // }
 
         // let mut dfs = Dfs::new(&graph, node_index(0));
         // while let Some(index) = dfs.next(&graph) {

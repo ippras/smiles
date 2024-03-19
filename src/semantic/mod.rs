@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 pub use self::error::Error;
 
 use self::error::Result;
@@ -5,7 +7,88 @@ use crate::syntax::{
     ast::{Edge, Node, SyntaxNodeExt},
     SyntaxKind::*,
 };
+use itertools::Itertools;
+use petgraph::{
+    algo::astar,
+    graph::{EdgeIndex, NodeIndex},
+    visit::{IntoNodeIdentifiers, NodeFiltered},
+    Graph, Undirected,
+};
 use smol_str::ToSmolStr;
+
+// Molecule graph
+#[derive(Clone, Debug, Default)]
+pub struct MoleculeGraph(Graph<Atom, Bond, Undirected>);
+
+impl Deref for MoleculeGraph {
+    type Target = Graph<Atom, Bond, Undirected>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for MoleculeGraph {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl MoleculeGraph {
+    pub fn the_longest_carbon_chain(&self) -> Vec<NodeIndex> {
+        let carbons = NodeFiltered::from_fn(&**self, |index| {
+            matches!(self[index].element, None | Some(Element::C))
+        });
+        let paths = carbons
+            .node_identifiers()
+            .permutations(2)
+            .filter_map(|endpoints| {
+                astar(
+                    &carbons,
+                    endpoints[0],
+                    |finish| finish == endpoints[1],
+                    |_| 1,
+                    |_| 0,
+                )
+            });
+        paths.max_by_key(|&(cost, _)| cost).unwrap_or_default().1
+    }
+
+    fn hydrogen_filling(&mut self) {
+        for index in self.node_indices() {
+            let atom = self.node_weight(index).unwrap(); 
+            let desired_bonds_num = match atom.element {
+                Some(Element::C) => Some(4),
+                Some(Element::P) => Some(5),
+                Some(Element::O) => Some(2),
+                _ => None,
+            }
+            .expect("Can't handle this atom yet");
+
+            let neighbor_edges = self.edges(index).collect::<Vec<_>>();
+            let current_bonds_num: usize = neighbor_edges
+                .into_iter()
+                .map(|bond| match bond.weight() {
+                    Bond::Single => 1,
+                    Bond::Double => 2,
+                    _ => panic!("Can't handle this bond type yet"),
+                })
+                .sum();
+            let needed_hydrogen = desired_bonds_num - current_bonds_num;
+            for _ in 0..needed_hydrogen {
+                self.hydrogen(index);
+            }
+        }
+    }
+
+    fn hydrogen(&mut self, from: NodeIndex) -> EdgeIndex {
+        let to = self.add_node(Atom {
+            element: Some(Element::H),
+            ..Default::default()
+        });
+        self.add_edge(from, to, Bond::Single)
+    }
+}
 
 /// Element
 #[derive(Clone, Copy, Debug)]
@@ -131,7 +214,7 @@ pub enum Element {
 }
 
 /// Atom
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Atom {
     pub isotope: Option<u16>,
     pub element: Option<Element>,

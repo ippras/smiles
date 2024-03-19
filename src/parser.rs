@@ -11,10 +11,7 @@ use rowan::{GreenNode, GreenNodeBuilder};
 
 /// Parser
 pub struct Parser<'a> {
-    /// input tokens
-    // TODO: pub -> private
-    pub lexer: PeekNth<Lexer<'a>>,
-    /// the in-progress tree
+    lexer: PeekNth<Lexer<'a>>,
     builder: GreenNodeBuilder<'static>,
 }
 
@@ -96,13 +93,14 @@ impl<'a> Parser<'a> {
 
     fn branches(&mut self) -> Result<()> {
         self.builder.start_node(BRANCHES.into());
-        loop {
+        while self.peek(0).is_some() {
             if self.is_indexed() {
                 self.indexed();
             } else if self.peek(0) == Some(LEFT_PAREN) {
                 self.parentheses()?;
             } else {
-                break self.unindexed()?;
+                self.unindexed()?;
+                break;
             }
         }
         self.builder.finish_node(); // BRANCHES

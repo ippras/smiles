@@ -38,13 +38,13 @@ mod test {
     };
     use rowan::NodeOrToken;
 
-    #[test]
-    fn lexer() {
-        let parser = Parser::new("C(OCC)(=C)=CC");
-        for lexeme in parser.lexer {
-            println!("{lexeme:?}");
-        }
-    }
+    // #[test]
+    // fn lexer() {
+    //     let parser = Parser::new("C(OCC)(=C)=CC");
+    //     for lexeme in parser.lexer {
+    //         println!("{lexeme:?}");
+    //     }
+    // }
 
     #[test]
     fn parser() {

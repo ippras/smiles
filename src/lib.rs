@@ -12,7 +12,7 @@
 
 // [Rh-](Cl)(Cl)(Cl)(Cl)$[Rh-](Cl)(Cl)(Cl)Cl
 
-pub use self::parser::Parser;
+pub use self::{parser::Parser, semantic::MoleculeGraph};
 
 mod errors;
 mod language;
@@ -23,6 +23,8 @@ mod syntax;
 
 #[cfg(test)]
 mod test {
+    use std::collections::BTreeSet;
+
     use crate::{
         parser::Parser,
         semantic::{Atom, Bond, MoleculeGraph},
@@ -33,7 +35,10 @@ mod test {
     };
     use petgraph::{
         graph::{node_index, NodeIndex, UnGraph},
-        visit::{depth_first_search, Bfs, Control, Dfs, DfsEvent, IntoNodeIdentifiers},
+        visit::{
+            depth_first_search, Bfs, Control, Dfs, DfsEvent, EdgeRef, IntoEdgeReferences,
+            IntoEdges, IntoNodeIdentifiers,
+        },
         Graph, Undirected,
     };
     use rowan::NodeOrToken;
@@ -74,23 +79,54 @@ mod test {
     #[test]
     fn test() {
         // let parser = Parser::new("CCCCCCCCCCCCCC(=O)O");
-        let parser = Parser::new("CCCCCCC=CCCCCCCCC(=O)O");
+        // let parser = Parser::new("CCCCCCC=CCCCCCCCC(=O)O");
+        // w 6,6 (от метильного конца), d 9,12 (от карбоксильного конца)
+        let parser = Parser::new("CCCCCC=CCC=CCCCCCCCC(=O)O");
         let parse = parser.parse().unwrap();
         let root = parse.syntax().cast::<Root>().unwrap();
         let graph = MoleculeGraph::try_from(root).unwrap();
 
         println!("{graph:?}");
 
-        // for carbon in graph.carbons().node_identifiers() {
-        //     println!("node: {:?}", atom.element);
+        enum Notation {
+            Delta,
+            Omega,
+        }
+
+        let notation = Notation::Omega;
+
+        let unsaturated = graph.unsaturated().edge_references().count();
+        println!("unsaturated: {unsaturated:?}");
+
+        let indices: BTreeSet<_> = graph
+            .unsaturated()
+            .edge_references()
+            .map(|edge| {
+                let index = edge.source().index() + 1;
+                match notation {
+                    Notation::Delta => {
+                        let carbons = graph.carbons().node_identifiers().count();
+                        carbons - index
+                    }
+                    Notation::Omega => index,
+                }
+            })
+            .collect();
+        println!("indices: {indices:?}");
+        // for edge in graph.unsaturated().edge_references(){
+        //     println!("{{index:?}}: {:?}", edge.weight());
+        // }
+
+        // for index in graph.carbons().node_identifiers() {
+        //     println!("node: {:?}", graph[index].);
         // }
 
         // for atom in graph.node_weights() {
         //     println!("node: {:?}", atom.element);
         // }
 
-        // let mut dfs = Dfs::new(&graph, node_index(0));
-        // while let Some(index) = dfs.next(&graph) {
+        // let mut dfs = Dfs::new(&*graph, node_index(0));
+        // while let Some(index) = dfs.next(&*graph) {
         //     println!("index: {index:?}, value: {:?}", graph[index]);
         // }
     }

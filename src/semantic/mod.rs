@@ -1,5 +1,3 @@
-use std::ops::{Bound, Deref, DerefMut};
-
 pub use self::error::Error;
 
 use self::error::Result;
@@ -11,10 +9,14 @@ use itertools::Itertools;
 use petgraph::{
     algo::astar,
     graph::{EdgeIndex, EdgeReference, NodeIndex},
-    visit::{EdgeFiltered, EdgeRef, GraphBase, IntoNodeIdentifiers, NodeFiltered},
+    visit::{EdgeFiltered, EdgeRef, FilterEdge, GraphBase, IntoNodeIdentifiers, NodeFiltered},
     Graph, Undirected,
 };
 use smol_str::ToSmolStr;
+use std::{
+    collections::BTreeSet,
+    ops::{Bound, Deref, DerefMut},
+};
 
 // Molecule graph
 #[derive(Clone, Debug, Default)]
@@ -29,12 +31,13 @@ impl MoleculeGraph {
         })
     }
 
-    pub fn temp<'a>(
+    pub fn unsaturated<'a>(
         &'a self,
     ) -> EdgeFiltered<&Graph<Atom, Bond, Undirected>, impl Fn(EdgeReference<'a, Bond>) -> bool + '_>
     {
         EdgeFiltered::from_fn(self, |edge| {
-            matches!(self[edge.source()].element, None | Some(Element::C))
+            matches!(edge.weight(), Bond::Double | Bond::Triple)
+                && matches!(self[edge.source()].element, None | Some(Element::C))
                 && matches!(self[edge.target()].element, None | Some(Element::C))
         })
     }
@@ -279,7 +282,7 @@ impl TryFrom<Node> for Atom {
 }
 
 /// Bond
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Bond {
     #[default]
     Single,
@@ -462,6 +465,28 @@ fn charge(node: &Node) -> Result<i8> {
         Some(signed) if signed.token(MINUS).is_some() => Ok(-1),
         Some(_) => Ok(1),
         None => Ok(0),
+    }
+}
+
+pub trait Temp {
+    fn delta(self);
+}
+
+impl<F: FilterEdge<EdgeReference>> Temp for EdgeFiltered<&Graph<Atom, Bond, Undirected>, F> {
+    fn delta(self) {
+        let indices: BTreeSet<_> = self
+            .edge_references()
+            .map(|edge| {
+                let index = edge.source().index() + 1;
+                match notation {
+                    Notation::Delta => {
+                        let carbons = graph.carbons().node_identifiers().count();
+                        carbons - index
+                    }
+                    Notation::Omega => index,
+                }
+            })
+            .collect();
     }
 }
 

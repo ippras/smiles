@@ -33,7 +33,10 @@ mod test {
     };
     use petgraph::{
         graph::{node_index, NodeIndex, UnGraph},
-        visit::{depth_first_search, Bfs, Control, Dfs, DfsEvent, IntoNodeIdentifiers},
+        visit::{
+            depth_first_search, Bfs, Control, Dfs, DfsEvent, IntoEdgeReferences,
+            IntoNodeIdentifiers,
+        },
         Graph, Undirected,
     };
     use rowan::NodeOrToken;
@@ -74,16 +77,23 @@ mod test {
     #[test]
     fn test() {
         // let parser = Parser::new("CCCCCCCCCCCCCC(=O)O");
-        let parser = Parser::new("CCCCCCC=CCCCCCCCC(=O)O");
+        let parser = Parser::new("C(OCCCC)C=CCCCCCCCC(=O)O");
         let parse = parser.parse().unwrap();
         let root = parse.syntax().cast::<Root>().unwrap();
         let graph = MoleculeGraph::try_from(root).unwrap();
 
         println!("{graph:?}");
 
-        // for carbon in graph.carbons().node_identifiers() {
-        //     println!("node: {:?}", atom.element);
-        // }
+        for index in graph.carbons().node_identifiers() {
+            println!("{:2}: {:?}", index.index(), graph[index].element);
+        }
+
+        let the_longest_carbon_chain = graph.the_longest_carbon_chain();
+        println!("{the_longest_carbon_chain:?}");
+
+        for edge in graph.bonds(|bond| bond == Bond::Double).edge_references() {
+            println!("{edge:?}");
+        }
 
         // for atom in graph.node_weights() {
         //     println!("node: {:?}", atom.element);

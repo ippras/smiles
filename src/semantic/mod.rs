@@ -1,4 +1,4 @@
-use std::ops::{Bound, Deref, DerefMut};
+use std::ops::{Deref, DerefMut};
 
 pub use self::error::Error;
 
@@ -36,6 +36,18 @@ impl MoleculeGraph {
         EdgeFiltered::from_fn(self, |edge| {
             matches!(self[edge.source()].element, None | Some(Element::C))
                 && matches!(self[edge.target()].element, None | Some(Element::C))
+        })
+    }
+
+    pub fn bonds<'a>(
+        &'a self,
+        f: impl Fn(Bond) -> bool + 'a,
+    ) -> EdgeFiltered<&Graph<Atom, Bond, Undirected>, impl Fn(EdgeReference<'a, Bond>) -> bool + '_>
+    {
+        EdgeFiltered::from_fn(self, move |edge| {
+            matches!(self[edge.source()].element, None | Some(Element::C))
+                && matches!(self[edge.target()].element, None | Some(Element::C))
+                && f(*edge.weight())
         })
     }
 
@@ -279,7 +291,7 @@ impl TryFrom<Node> for Atom {
 }
 
 /// Bond
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Bond {
     #[default]
     Single,
